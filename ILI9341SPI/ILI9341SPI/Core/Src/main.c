@@ -27,12 +27,63 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+/* Direction values are also the sprite-sheet column index for that facing,
+ * so casting (int)BikeDir straight into LCD_SpriteOverBg(..., index, ...)
+ * picks the correct frame. Frame layout: 0=UP 1=LEFT 2=DOWN 3=RIGHT. */
+typedef enum {
+    DIR_UP    = 0,
+    DIR_LEFT  = 1,
+    DIR_DOWN  = 2,
+    DIR_RIGHT = 3
+} BikeDir;
 
+typedef struct {
+    int             x, y;          /* current top-left position */
+    int             prev_x, prev_y;/* previous frame, used for delta-restore */
+    BikeDir         dir;           /* facing == direction of motion */
+    int             speed;         /* pixels per frame */
+    const uint16_t *sheet;         /* 8-column sprite sheet for this character */
+    uint16_t        transp;        /* transparent color key for this sheet */
+} Bike;
+
+/* Hitbox rectangle expressed as an offset from the sprite top-left
+ * plus its own width and height. One instance per direction (see
+ * hitbox_for_dir[] in USER CODE 0). */
+typedef struct {
+    int off_x, off_y;
+    int w, h;
+} HitboxRect;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/* Playfield: inclusive pixel bounds the bike's body must stay inside. */
+#define ARENA_X0      3
+#define ARENA_Y0      41
+#define ARENA_X1      316
+#define ARENA_Y1      236
 
+#define BIKE_W        32
+#define BIKE_H        32
+#define BIKE_TRANSP   0x0263
+
+/* Collision hitbox: narrow rectangle centered in the 32x32 sprite box.
+ * The LONG axis (32) always runs with the direction of travel, the SHORT
+ * axis (14) is perpendicular and inset 9 px from each sprite edge.
+ * Used by trail laying and collision — NOT by rendering (the sprite is
+ * still drawn as a full 32x32 composite). */
+#define HITBOX_LONG   BIKE_W                          /* 32, along heading */
+#define HITBOX_SHORT  14                              /* perp. to heading  */
+#define HITBOX_INSET  ((BIKE_W - HITBOX_SHORT) / 2)   /* = 9               */
+
+/* Bounds for the bike's sprite top-left so its body stays in the arena.
+ * Because the hitbox's long axis (32) equals BIKE_W, these numbers are
+ * identical whether you reason about the sprite box or the hitbox's
+ * leading edge along the direction of travel. */
+#define BIKE_X_MIN    ARENA_X0
+#define BIKE_Y_MIN    ARENA_Y0
+#define BIKE_X_MAX    (ARENA_X1 - BIKE_W + 1)   /* 316 - 32 + 1 = 285 */
+#define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H + 1)   /* 236 - 32 + 1 = 205 */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,7 +111,28 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/* Hitbox geometry per facing. Indexed by BikeDir (UP=0, LEFT=1, DOWN=2,
+ * RIGHT=3) so a lookup is just hitbox_for_dir[bike.dir]. Kept read-only
+ * in flash. When you add a new sprite that needs a different hitbox,
+ * change these constants — not the per-frame code. */
+static const HitboxRect hitbox_for_dir[4] = {
+    /* DIR_UP    */ { HITBOX_INSET, 0,            HITBOX_SHORT, HITBOX_LONG  },
+    /* DIR_LEFT  */ { 0,            HITBOX_INSET, HITBOX_LONG,  HITBOX_SHORT },
+    /* DIR_DOWN  */ { HITBOX_INSET, 0,            HITBOX_SHORT, HITBOX_LONG  },
+    /* DIR_RIGHT */ { 0,            HITBOX_INSET, HITBOX_LONG,  HITBOX_SHORT },
+};
 
+/* Fill hx/hy/hw/hh with the bike's current hitbox in screen coordinates.
+ * This is the ONLY place trail/collision code should read the collision
+ * rect from — never use BIKE_W/BIKE_H directly for those. */
+static inline void bike_get_hitbox(const Bike *b,
+                                   int *hx, int *hy, int *hw, int *hh) {
+    const HitboxRect *r = &hitbox_for_dir[b->dir];
+    *hx = b->x + r->off_x;
+    *hy = b->y + r->off_y;
+    *hw = r->w;
+    *hh = r->h;
+}
 /* USER CODE END 0 */
 
 /**
@@ -95,102 +167,95 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-	/*-----
-	LCD_Init();
-
-	LCD_Clear(0x00);
-	FillRect(0, 0, 319, 239, 0xFFFF);
-	FillRect(50, 60, 20, 20, 0xF800);
-	FillRect(70, 60, 20, 20, 0x07E0);
-	FillRect(90, 60, 20, 20, 0x001F);
-
-	LCD_Bitmap(0, 0, 320, 240, fondot);
-//	FillRect(0, 0, 319, 206, 0x421b);
-//
-	LCD_Print("Hola Mundo", 20, 100, 2, 0x001F, 0xCAB9); ----*/
-
-	//LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset);
-	//LCD_Sprite(60,100,32,32,pesaSprite,4,3,0,1);
-
-	//LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int height, unsigned char bitmap[]);
-	//LCD_Bitmap(0, 0, 320, 240, fondo);
-
-	/*
-	for (int x = 0; x < 319; x++) {
-		LCD_Bitmap(x, 116, 15, 15, tile);
-		LCD_Bitmap(x, 68, 15, 15, tile);
-		LCD_Bitmap(x, 207, 15, 15, tile);
-		LCD_Bitmap(x, 223, 15, 15, tile);
-		x += 15;
-	}
-	*/
 
 	  LCD_Init();
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
 
-	  #define BIKE_TRANSP  0x0263
-	  #define BIKE1_Y      100
-      #define BIKE2_Y      170
-	  #define BIKE_W       32
-	  #define BIKE_H       32
+	  /* Single-bike square-loop test. No input, no collisions, no trail yet.
+	   * Designed so a future second bike is just another Bike struct, and a
+	   * future input layer only needs to overwrite bike.dir each frame. */
+	  Bike bike = {
+		  .x      = BIKE_X_MIN,
+		  .y      = BIKE_Y_MIN,
+		  .prev_x = BIKE_X_MIN,
+		  .prev_y = BIKE_Y_MIN,
+		  .dir    = DIR_RIGHT,
+		  .speed  = 2,
+		  .sheet  = bike_kevinflyn,
+		  .transp = BIKE_TRANSP,
+	  };
 
-	  int bike1_x = 0;
-	  int bike2_x = 0;
-	  int bike1_prev_x = 0;
-	  int bike2_prev_x = 0;
-	  int direction1 = 1;
-	  int direction2 = 1;
+	  /* Square path: list of corners to visit in order, each paired with the
+	   * direction the bike should turn to AFTER it arrives. Cycling target
+	   * with (target+1)&3 makes the bike loop forever. */
+	  static const struct { int x, y; BikeDir next_dir; } corners[4] = {
+		  { BIKE_X_MAX, BIKE_Y_MIN, DIR_DOWN  },  /* top-right    -> turn down  */
+		  { BIKE_X_MAX, BIKE_Y_MAX, DIR_LEFT  },  /* bottom-right -> turn left  */
+		  { BIKE_X_MIN, BIKE_Y_MAX, DIR_UP    },  /* bottom-left  -> turn up    */
+		  { BIKE_X_MIN, BIKE_Y_MIN, DIR_RIGHT },  /* top-left     -> turn right */
+	  };
+	  int target = 0;
+
+	  /* Paint the bike once at its spawn so frame 1's restore has something to
+	   * work against (otherwise the first delta-restore would be a no-op and
+	   * the very first sprite draw would still be correct, but this keeps the
+	   * visual symmetric with later frames). */
+	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+					   bike.sheet, 8, (int)bike.dir, 0, 0,
+					   bike.transp, arena_bg, 320);
 
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	/*----
-	while (1) {
-
-		for (int x = 0; x < 319-24; x++) {
-					int anim = (x/10)%4;
-					// anim 0 1 2 3
-					LCD_Sprite(x, 100, 24, 30, sonics, 4, anim, 0, 0);
-					V_line( x -1, 100, 30, 0x0DFE);
-					HAL_Delay(15);
-
-				}
-				for (int var = 319-24; var > 0;  var--) {
-					int anim = (var / 10) % 4;
-					LCD_Sprite(var, 100, 24, 30, sonics, 4, anim, 1, 0);
-					V_line(var + 24, 100, 30, 0x0DFE);
-					HAL_Delay(15);
-				}
-	----*/
 
 	while (1) {
+		/* 1. Remember where we were so the delta-restore knows what strip
+		 *    of background just got uncovered. */
+		bike.prev_x = bike.x;
+		bike.prev_y = bike.y;
 
-	  int anim1 = (bike1_x / 10) % 8;
-	  char flipped1 = (direction1 == -1) ? 1 : 0;
+		/* 2. Advance one step in the current facing. */
+		switch (bike.dir) {
+			case DIR_RIGHT: bike.x += bike.speed; break;
+			case DIR_LEFT:  bike.x -= bike.speed; break;
+			case DIR_DOWN:  bike.y += bike.speed; break;
+			case DIR_UP:    bike.y -= bike.speed; break;
+		}
 
-	  int anim2 = (bike2_x / 10) % 8;
-	  char flipped2 = (direction2 == -1) ? 1 : 0;
+		/* 3. If we just reached or overshot the next corner, snap exactly
+		 *    onto it and rotate to the next side of the square. */
+		int reached = 0;
+		switch (bike.dir) {
+			case DIR_RIGHT:
+				if (bike.x >= corners[target].x) { bike.x = corners[target].x; reached = 1; }
+				break;
+			case DIR_LEFT:
+				if (bike.x <= corners[target].x) { bike.x = corners[target].x; reached = 1; }
+				break;
+			case DIR_DOWN:
+				if (bike.y >= corners[target].y) { bike.y = corners[target].y; reached = 1; }
+				break;
+			case DIR_UP:
+				if (bike.y <= corners[target].y) { bike.y = corners[target].y; reached = 1; }
+				break;
+		}
+		if (reached) {
+			bike.dir = corners[target].next_dir;
+			target   = (target + 1) & 3;
+		}
 
-	  LCD_RestoreBgDelta(bike1_prev_x, bike1_x, BIKE1_Y, BIKE_W, BIKE_H, arena_bg, 320);
-	  LCD_SpriteOverBg(bike1_x, BIKE1_Y, BIKE_W, BIKE_H, bike_flyn, 8, anim1, flipped1, 0, BIKE_TRANSP, arena_bg, 320);
+		/* 4. Repaint: restore only the freshly-uncovered background strip,
+		 *    then composite the sprite at the new position with the new
+		 *    facing. (int)bike.dir is the sprite-sheet column. */
+		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+						   BIKE_W, BIKE_H, arena_bg, 320);
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+						 bike.sheet, 8, (int)bike.dir, 0, 0,
+						 bike.transp, arena_bg, 320);
 
-	  LCD_RestoreBgDelta(bike2_prev_x, bike2_x, BIKE2_Y, BIKE_W, BIKE_H, arena_bg, 320);
-	  LCD_SpriteOverBg(bike2_x, BIKE2_Y, BIKE_W, BIKE_H, bike_orange, 8, anim2, flipped2, 0, BIKE_TRANSP, arena_bg, 320);
-
-	  bike1_prev_x = bike1_x;
-	  bike1_x += direction1;
-	  if (bike1_x >= 319 - BIKE_W) direction1 = -1;
-	  if (bike1_x <= 0) direction1 =  1;
-
-	  bike2_prev_x = bike2_x;
-	  bike2_x += direction2;
-	  if (bike2_x >= 319 - BIKE_W) direction2 = -1;
-	  if (bike2_x <= 0) direction2 =  1;
-
-	  HAL_Delay(15);
-
+		HAL_Delay(15);
 
     /* USER CODE END WHILE */
 
