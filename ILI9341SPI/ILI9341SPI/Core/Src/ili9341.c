@@ -443,7 +443,27 @@ void LCD_Sprite(int x, int y, int width, int height, const uint16_t *bitmap,
 // transpColor : color tratado como transparente (ej: 0xF81F)
 // bg / bgWidth: bitmap de fondo completo y su ancho en píxeles
 //***************************************************************************************************************************************
+
 static uint8_t _slbuf[320 * 2];
+
+static void _restore_bg_rect(int x, int y, int w, int h, const uint16_t *bg, unsigned int bgWidth){
+	if (w <= 0 || h <= 0) return;
+
+	for (int j = 0; j < h; j++){
+		for (int i = 0; i < w; i++){
+			uint16_t px = bg[(y + j) * bgWidth + (x + i)];
+			_slbuf[i * 2] = px >> 8;
+			_slbuf[i * 2 + 1] = px & 0xFF;
+		}
+
+		SetWindows(x, y+j, x+w-1, y+j);
+		LCD_DC_H();
+		LCD_CS_L();
+		HAL_SPI_Transmit(&hspi1, _slbuf, w*2, HAL_MAX_DELAY);
+		LCD_CS_H();
+
+	}
+}
 
 void LCD_SpriteOverBg(int x, int y, int width, int height,
                       const uint16_t *bitmap, int columns, int index,
@@ -452,7 +472,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
     int ancho = width * columns;
 
     for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
+        for (int i = 0; i < width; i++) {		// width - 1
             uint16_t px = bg[(y + j) * bgWidth + (x + i)];
             _slbuf[i * 2]     = px >> 8;
             _slbuf[i * 2 + 1] = px & 0xFF;
@@ -469,7 +489,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
                 }
             }
         } else {
-            k = j * ancho + index * width + 1 + offset;
+            k = j * ancho + index * width + offset;
             for (int i = 0; i < width; i++) {
                 uint16_t px = bitmap[k++];
                 if (px != transpColor) {
@@ -479,9 +499,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
             }
         }
 
-        // SetWindows primero — deja CS en HIGH al terminar
         SetWindows(x, y + j, x + width - 1, y + j);
-        // AHORA sí bajar DC y CS para el bulk transfer
         LCD_DC_H();
         LCD_CS_L();
         HAL_SPI_Transmit(&hspi1, _slbuf, width * 2, HAL_MAX_DELAY);
@@ -489,31 +507,39 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
     }
 }
 
-void LCD_RestoreBgDelta(int old_x, int new_x, int y, int w, int h,
+void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
+						int w, int h,
                         const uint16_t *bg, unsigned int bgWidth) {
-    int delta = new_x - old_x;
-    if (delta == 0) return;
+    int dx = new_x - old_x;
+    int dy = new_y - old_y;
 
-    int erase_x, erase_w;
-    if (delta > 0) {
-        erase_x = old_x;
-        erase_w = delta;
-    } else {
-        erase_x = old_x + w + delta;
-        erase_w = -delta;
+    if (dx == 0 && dy == 0) return;
+
+    if (dx >= w || dx <= -w || dy >= h || dy <= -h){
+    	_restore_bg_rect(old_x, old_y, w, h, bg, bgWidth);
+    	return;
     }
 
-    for (int j = 0; j < h; j++) {
-        for (int i = 0; i < erase_w; i++) {
-            uint16_t px = bg[(y + j) * bgWidth + (erase_x + i)];
-            _slbuf[i * 2]     = px >> 8;
-            _slbuf[i * 2 + 1] = px & 0xFF;
-        }
-        // Mismo fix: SetWindows antes, CS_L después
-        SetWindows(erase_x, y + j, erase_x + erase_w - 1, y + j);
-        LCD_DC_H();
-        LCD_CS_L();
-        HAL_SPI_Transmit(&hspi1, _slbuf, erase_w * 2, HAL_MAX_DELAY);
-        LCD_CS_H();
+    if (dy > 0){
+    	_restore_bg_rect(old_x, old_y, w, dy, bg, bgWidth);
+    }else if (dy < 0){
+    	_restore_bg_rect(old_x, old_y + h + dy, w, -dy, bg, bgWidth);
+    }
+
+    int v_y = old_y;
+    int v_h = h;
+
+    if (dy > 0){
+    	v_y = old_y + dy;
+    	v_h = h - dy;
+    }else if (dy < 0){
+    	v_y = old_y;
+    	v_h = h + dy;
+    }
+
+    if (dx > 0){
+    	_restore_bg_rect(old_x, v_y, dx, h, bg, bgWidth);
+    }else if (dx < 0){
+    	_restore_bg_rect(old_x + w + dx, v_y, -dx, v_h, bg, bgWidth);
     }
 }

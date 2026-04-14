@@ -36,6 +36,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
                       char flip, char offset, uint16_t transpColor,
                       const uint16_t *bg, unsigned int bgWidth);
 
-void LCD_RestoreBgDelta(int old_x, int new_x, int y, int w, int h,
+void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
+                        int w, int h,
                         const uint16_t *bg, unsigned int bgWidth);
 #endif /* INC_ILI9341_H_ */
