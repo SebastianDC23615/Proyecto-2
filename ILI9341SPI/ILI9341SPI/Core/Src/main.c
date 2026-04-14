@@ -253,7 +253,7 @@ int main(void)
 		  .prev_y = BIKE_Y_MIN,
 		  .dir    = DIR_RIGHT,
 		  .speed  = 1,
-		  .sheet  = mini_kevinflyn,
+		  .sheet  = medium_kevinflyn,
 		  .transp = BIKE_TRANSP,
 	  };
 
