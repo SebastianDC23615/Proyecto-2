@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "ili9341.h"
 #include "bitmaps.h"
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +55,18 @@ typedef struct {
     int off_x, off_y;
     int w, h;
 } HitboxRect;
+
+typedef struct {
+    uint8_t j1_yes;   /* P1 A button, "slow" */
+    uint8_t j1_no;    /* P1 B button, "fast" */
+    uint8_t j2_yes;   /* P2 A */
+    uint8_t j2_no;    /* P2 B */
+    uint8_t j1_x;     /* 0=left 127=center 255=right */
+    uint8_t j1_y;     /* 0=up   127=center 255=down  */
+    uint8_t j2_x;
+    uint8_t j2_y;
+} struct_mensaje;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -65,7 +79,7 @@ typedef struct {
 
 #define BIKE_W        32
 #define BIKE_H        32
-#define BIKE_TRANSP   0x0263
+#define BIKE_TRANSP   0x0263 // #004D19
 
 /* Collision hitbox: narrow rectangle centered in the 32x32 sprite box.
  * The LONG axis (32) always runs with the direction of travel, the SHORT
@@ -84,6 +98,15 @@ typedef struct {
 #define BIKE_Y_MIN    ARENA_Y0
 #define BIKE_X_MAX    (ARENA_X1 - BIKE_W + 1)   /* 316 - 32 + 1 = 285 */
 #define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H + 1)   /* 236 - 32 + 1 = 205 */
+
+
+#define JOY_CENTER       127
+#define JOY_DEADZONE      40
+
+#define BIKE_SPEED_SLOW    1
+#define BIKE_SPEED_NORMAL  2
+#define BIKE_SPEED_FAST    5
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -94,10 +117,20 @@ typedef struct {
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
+
+/* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
+uint8_t           rx_byte;            /* 1-byte slot for sync hunt     */
+uint8_t           rx_payload[8];      /* 8-byte slot for payload read  */
+volatile uint8_t  sincronizado = 0;   /* 0 = waiting for 0xAA, 1 = reading payload */
+volatile struct_mensaje datosJugadores;  /* latest decoded snapshot    */
+
+volatile uint8_t dbg_pending = 0;
+uint8_t dbg_copy[8];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -105,6 +138,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -133,6 +167,42 @@ static inline void bike_get_hitbox(const Bike *b,
     *hw = r->w;
     *hh = r->h;
 }
+
+/* Map one joystick's X/Y + buttons to a desired direction and speed.
+ * Returns the bike's CURRENT dir unchanged if the stick is in the
+ * deadzone, if both axes are out but equal, or if the requested move
+ * is a 180° reverse (not allowed in Tron). */
+static inline void input_to_bike(uint8_t jx, uint8_t jy,
+                                 uint8_t btn_slow, uint8_t btn_fast,
+                                 BikeDir *io_dir, int *out_speed) {
+    int dx = (int)jx - JOY_CENTER;
+    int dy = (int)jy - JOY_CENTER;
+    int ax = dx < 0 ? -dx : dx;
+    int ay = dy < 0 ? -dy : dy;
+
+    BikeDir requested = *io_dir;     /* default: keep current facing */
+    if (ax >= JOY_DEADZONE || ay >= JOY_DEADZONE) {
+        if (ax > ay)      requested = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
+        else if (ay > ax) requested = (dy > 0) ? DIR_UP  : DIR_DOWN;
+        /* ax == ay: ambiguous, keep current */
+    }
+
+    /* Reject 180° reversal. UP<->DOWN and LEFT<->RIGHT share parity. */
+    BikeDir cur = *io_dir;
+    int is_reverse =
+        (cur == DIR_UP    && requested == DIR_DOWN)  ||
+        (cur == DIR_DOWN  && requested == DIR_UP)    ||
+        (cur == DIR_LEFT  && requested == DIR_RIGHT) ||
+        (cur == DIR_RIGHT && requested == DIR_LEFT);
+    if (!is_reverse) *io_dir = requested;
+
+    /* Speed: slow takes priority if both buttons are pressed. */
+    if (btn_slow)      *out_speed = BIKE_SPEED_SLOW;
+    else if (btn_fast) *out_speed = BIKE_SPEED_FAST;
+    else               *out_speed = BIKE_SPEED_NORMAL;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -166,10 +236,12 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_SPI1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
 	  LCD_Init();
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
+
 
 	  /* Single-bike square-loop test. No input, no collisions, no trail yet.
 	   * Designed so a future second bike is just another Bike struct, and a
@@ -180,21 +252,11 @@ int main(void)
 		  .prev_x = BIKE_X_MIN,
 		  .prev_y = BIKE_Y_MIN,
 		  .dir    = DIR_RIGHT,
-		  .speed  = 2,
-		  .sheet  = bike_kevinflyn,
+		  .speed  = 1,
+		  .sheet  = mini_kevinflyn,
 		  .transp = BIKE_TRANSP,
 	  };
 
-	  /* Square path: list of corners to visit in order, each paired with the
-	   * direction the bike should turn to AFTER it arrives. Cycling target
-	   * with (target+1)&3 makes the bike loop forever. */
-	  static const struct { int x, y; BikeDir next_dir; } corners[4] = {
-		  { BIKE_X_MAX, BIKE_Y_MIN, DIR_DOWN  },  /* top-right    -> turn down  */
-		  { BIKE_X_MAX, BIKE_Y_MAX, DIR_LEFT  },  /* bottom-right -> turn left  */
-		  { BIKE_X_MIN, BIKE_Y_MAX, DIR_UP    },  /* bottom-left  -> turn up    */
-		  { BIKE_X_MIN, BIKE_Y_MIN, DIR_RIGHT },  /* top-left     -> turn right */
-	  };
-	  int target = 0;
 
 	  /* Paint the bike once at its spawn so frame 1's restore has something to
 	   * work against (otherwise the first delta-restore would be a no-op and
@@ -204,58 +266,59 @@ int main(void)
 					   bike.sheet, 8, (int)bike.dir, 0, 0,
 					   bike.transp, arena_bg, 320);
 
+	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	while (1) {
-		/* 1. Remember where we were so the delta-restore knows what strip
-		 *    of background just got uncovered. */
-		bike.prev_x = bike.x;
-		bike.prev_y = bike.y;
+	  while (1) {
+	      /* 1. Pull latest joystick snapshot into locals. The volatile read
+	       *    is a single-frame latch — if a UART IRQ fires mid-frame, we
+	       *    use the OLD snapshot for this frame and pick up the new one
+	       *    next frame, which is fine at 50 ms UART cadence vs 15 ms frames. */
+	      struct_mensaje snap = datosJugadores;
 
-		/* 2. Advance one step in the current facing. */
-		switch (bike.dir) {
-			case DIR_RIGHT: bike.x += bike.speed; break;
-			case DIR_LEFT:  bike.x -= bike.speed; break;
-			case DIR_DOWN:  bike.y += bike.speed; break;
-			case DIR_UP:    bike.y -= bike.speed; break;
-		}
+	      /* 2. Map player 1 input onto bike's facing + speed. */
+	      input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no,
+	                    &bike.dir, &bike.speed);
 
-		/* 3. If we just reached or overshot the next corner, snap exactly
-		 *    onto it and rotate to the next side of the square. */
-		int reached = 0;
-		switch (bike.dir) {
-			case DIR_RIGHT:
-				if (bike.x >= corners[target].x) { bike.x = corners[target].x; reached = 1; }
-				break;
-			case DIR_LEFT:
-				if (bike.x <= corners[target].x) { bike.x = corners[target].x; reached = 1; }
-				break;
-			case DIR_DOWN:
-				if (bike.y >= corners[target].y) { bike.y = corners[target].y; reached = 1; }
-				break;
-			case DIR_UP:
-				if (bike.y <= corners[target].y) { bike.y = corners[target].y; reached = 1; }
-				break;
-		}
-		if (reached) {
-			bike.dir = corners[target].next_dir;
-			target   = (target + 1) & 3;
-		}
+	      /* 3. Move one step in the (possibly just-updated) facing. */
+	      bike.prev_x = bike.x;
+	      bike.prev_y = bike.y;
+	      switch (bike.dir) {
+	          case DIR_RIGHT: bike.x += bike.speed; break;
+	          case DIR_LEFT:  bike.x -= bike.speed; break;
+	          case DIR_DOWN:  bike.y += bike.speed; break;
+	          case DIR_UP:    bike.y -= bike.speed; break;
+	      }
 
-		/* 4. Repaint: restore only the freshly-uncovered background strip,
-		 *    then composite the sprite at the new position with the new
-		 *    facing. (int)bike.dir is the sprite-sheet column. */
-		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
-						   BIKE_W, BIKE_H, arena_bg, 320);
-		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
-						 bike.sheet, 8, (int)bike.dir, 0, 0,
-						 bike.transp, arena_bg, 320);
+	      /* 4. Hard-clamp to arena so we can't walk off the playfield.
+	       *    This is a placeholder until wall-collision (lose a life) lands. */
+	      if (bike.x < BIKE_X_MIN) bike.x = BIKE_X_MIN;
+	      if (bike.x > BIKE_X_MAX) bike.x = BIKE_X_MAX;
+	      if (bike.y < BIKE_Y_MIN) bike.y = BIKE_Y_MIN;
+	      if (bike.y > BIKE_Y_MAX) bike.y = BIKE_Y_MAX;
 
-		HAL_Delay(15);
+	      /* 5. Restore + draw (unchanged). */
+	      LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+	                         BIKE_W, BIKE_H, arena_bg, 320);
+	      LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+	                       bike.sheet, 8, (int)bike.dir, 0, 0,
+	                       bike.transp, arena_bg, 320);
+
+	      if (dbg_pending) {
+	          dbg_pending = 0;
+	          char dbg[80];
+	          int n = snprintf(dbg, sizeof(dbg),
+	              "J1 x=%3u y=%3u A=%u B=%u | J2 x=%3u y=%3u A=%u B=%u\r\n",
+	              dbg_copy[4], dbg_copy[5], dbg_copy[0], dbg_copy[1],
+	              dbg_copy[6], dbg_copy[7], dbg_copy[2], dbg_copy[3]);
+	          HAL_UART_Transmit(&huart2, (uint8_t *)dbg, n, HAL_MAX_DELAY);
+	      }
+
+	      HAL_Delay(15);
 
     /* USER CODE END WHILE */
 
@@ -350,6 +413,39 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -440,6 +536,30 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) {
+        if (sincronizado == 0) {
+            /* Hunting for the 0xAA sync byte. */
+            if (rx_byte == 0xAA) {
+                sincronizado = 1;
+                HAL_UART_Receive_IT(&huart1, rx_payload, 8);
+            } else {
+                HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+            }
+        } else {
+            /* Full 8-byte payload in hand. Commit and go back to hunting. */
+            memcpy((void *)&datosJugadores, rx_payload, sizeof(datosJugadores));
+            sincronizado = 0;
+
+            char dbg[80];
+            memcpy(dbg_copy, rx_payload, 8);
+            dbg_pending = 1;
+
+            HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+        }
+    }
+}
 
 /* USER CODE END 4 */
 
