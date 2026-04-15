@@ -123,6 +123,8 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
+extern const uint16_t arena_bg[];
+
 const uint64_t traces[];
 
 /* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
@@ -376,7 +378,7 @@ int main(void)
 	              val = snprintf(msg, sizeof(msg), "%u", 4);
 	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	          } else {
+	          } else if ((p_j1 != 1) || (p_j2 != 1)){
 	              val = snprintf(msg, sizeof(msg), "%u", 5);
 	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
