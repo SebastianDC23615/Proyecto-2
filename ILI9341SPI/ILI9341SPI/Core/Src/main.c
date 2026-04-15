@@ -247,8 +247,13 @@ int main(void)
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
 
 	  struct_mensaje snap = datosJugadores;
-	  uint8_t prev_val = snap.j1_no;
-	  //uint8_t prev_vel = snap.j2_yes;
+	  uint8_t p_j1 = snap.j1_no;
+	  uint8_t p_j2 = snap.j2_no;
+
+	  char msg[3];
+	  uint8_t val = 0;
+	  val = snprintf(msg, sizeof(msg), "%u", 4);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
 
 	  /* Single-bike square-loop test. No input, no collisions, no trail yet.
@@ -303,13 +308,13 @@ int main(void)
 	       *    next frame, which is fine at 50 ms UART cadence vs 15 ms frames. */
 	      struct_mensaje snap = datosJugadores;
 
-	      /* 2. Map player 1 input onto bike's facing + speed. */
+	      // mapear cada jugador a variables de struct con inputs de controles
 	      input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no,
 	                    &bike.dir, &bike.speed);
 	      input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no,
                   	  	&bike2.dir, &bike2.speed);
 
-	      /* 3. Move one step in the (possibly just-updated) facing. */
+	      // Mover hacia nueva posicion segun velocidad y cambiar direccion de sprite
 	      bike.prev_x = bike.x;
 	      bike2.prev_x = bike2.x;
 	      bike.prev_y = bike.y;
@@ -328,8 +333,7 @@ int main(void)
 			  }
 
 
-	      /* 4. Hard-clamp to arena so we can't walk off the playfield.
-	       *    This is a placeholder until wall-collision (lose a life) lands. */
+	      // hard limits de la arena jugable
 	      if (bike.x < BIKE_X_MIN) bike.x = BIKE_X_MIN;
 	      if (bike.x > BIKE_X_MAX) bike.x = BIKE_X_MAX;
 	      if (bike.y < BIKE_Y_MIN) bike.y = BIKE_Y_MIN;
@@ -340,7 +344,7 @@ int main(void)
 		  if (bike2.y < BIKE_Y_MIN) bike2.y = BIKE_Y_MIN;
 		  if (bike2.y > BIKE_Y_MAX) bike2.y = BIKE_Y_MAX;
 
-	      /* 5. Restore + draw (unchanged). */
+	      // Restaurar fondo y volver a mostrar motos
 	      LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
 	                         BIKE_W, BIKE_H, arena_bg, 320);
 	      LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
@@ -366,19 +370,36 @@ int main(void)
 	      char msg[3];
 	      uint8_t val = 0;
 
-	      if ((prev_val == snap.j1_no)/* || (prev_vel == snap.j2_no)*/) {
+	      if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+
+	          if ((snap.j1_no == 0) && (snap.j2_no == 0)){
+	              val = snprintf(msg, sizeof(msg), "%u", 4);
+	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	          } else {
+	              val = snprintf(msg, sizeof(msg), "%u", 5);
+	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	          }
+
+	          p_j1 = snap.j1_no;
+	          p_j2 = snap.j2_no;
+	      }
+
+
+	      /*if ((prev_val == snap.j1_no)) {
 	    	  //prev_val = snap.j1_no;
 	      }else if (snap.j1_no){
 	    	  val = snprintf(msg, sizeof(msg), "%u", 5);
 	    	  prev_val = snap.j1_no;
 	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	    	  HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
 	      }else{
 	    	  val = snprintf(msg, sizeof(msg), "%u", 4);
 	    	  prev_val = snap.j1_no;
 	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	      }
-
-	      HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	    	  HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	      }*/
 
 	      HAL_Delay(15);
 
