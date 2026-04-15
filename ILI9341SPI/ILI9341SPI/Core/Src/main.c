@@ -101,7 +101,7 @@ typedef struct {
 
 
 #define JOY_CENTER       127
-#define JOY_DEADZONE      40
+#define JOY_DEADZONE      80
 
 #define BIKE_SPEED_SLOW    1
 #define BIKE_SPEED_NORMAL  2
@@ -119,9 +119,11 @@ SPI_HandleTypeDef hspi1;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
+const uint64_t traces[];
 
 /* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
 uint8_t           rx_byte;            /* 1-byte slot for sync hunt     */
@@ -139,6 +141,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -237,10 +240,15 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
 	  LCD_Init();
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
+
+	  struct_mensaje snap = datosJugadores;
+	  uint8_t prev_val = snap.j1_no;
+	  //uint8_t prev_vel = snap.j2_yes;
 
 
 	  /* Single-bike square-loop test. No input, no collisions, no trail yet.
@@ -253,7 +261,18 @@ int main(void)
 		  .prev_y = BIKE_Y_MIN,
 		  .dir    = DIR_RIGHT,
 		  .speed  = 1,
-		  .sheet  = medium_kevinflyn,
+		  .sheet  = bike_kevinflyn,
+		  .transp = BIKE_TRANSP,
+	  };
+
+	  Bike bike2 = {
+		  .x      = 284,
+		  .y      = 204,
+		  .prev_x = 284,
+		  .prev_y = 204,
+		  .dir    = DIR_LEFT,
+		  .speed  = 1,
+		  .sheet  = bike_ares,
 		  .transp = BIKE_TRANSP,
 	  };
 
@@ -265,6 +284,10 @@ int main(void)
 	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
 					   bike.sheet, 8, (int)bike.dir, 0, 0,
 					   bike.transp, arena_bg, 320);
+
+	  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
+					   bike2.sheet, 8, (int)bike2.dir, 0, 0,
+					   bike2.transp, arena_bg, 320);
 
 	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
@@ -283,16 +306,27 @@ int main(void)
 	      /* 2. Map player 1 input onto bike's facing + speed. */
 	      input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no,
 	                    &bike.dir, &bike.speed);
+	      input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no,
+                  	  	&bike2.dir, &bike2.speed);
 
 	      /* 3. Move one step in the (possibly just-updated) facing. */
 	      bike.prev_x = bike.x;
+	      bike2.prev_x = bike2.x;
 	      bike.prev_y = bike.y;
+	      bike2.prev_y = bike2.y;
 	      switch (bike.dir) {
 	          case DIR_RIGHT: bike.x += bike.speed; break;
 	          case DIR_LEFT:  bike.x -= bike.speed; break;
 	          case DIR_DOWN:  bike.y += bike.speed; break;
 	          case DIR_UP:    bike.y -= bike.speed; break;
 	      }
+	      switch (bike2.dir) {
+				  case DIR_RIGHT: bike2.x += bike2.speed; break;
+				  case DIR_LEFT:  bike2.x -= bike2.speed; break;
+				  case DIR_DOWN:  bike2.y += bike2.speed; break;
+				  case DIR_UP:    bike2.y -= bike2.speed; break;
+			  }
+
 
 	      /* 4. Hard-clamp to arena so we can't walk off the playfield.
 	       *    This is a placeholder until wall-collision (lose a life) lands. */
@@ -301,6 +335,11 @@ int main(void)
 	      if (bike.y < BIKE_Y_MIN) bike.y = BIKE_Y_MIN;
 	      if (bike.y > BIKE_Y_MAX) bike.y = BIKE_Y_MAX;
 
+	      if (bike2.x < BIKE_X_MIN) bike2.x = BIKE_X_MIN;
+		  if (bike2.x > BIKE_X_MAX) bike2.x = BIKE_X_MAX;
+		  if (bike2.y < BIKE_Y_MIN) bike2.y = BIKE_Y_MIN;
+		  if (bike2.y > BIKE_Y_MAX) bike2.y = BIKE_Y_MAX;
+
 	      /* 5. Restore + draw (unchanged). */
 	      LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
 	                         BIKE_W, BIKE_H, arena_bg, 320);
@@ -308,7 +347,13 @@ int main(void)
 	                       bike.sheet, 8, (int)bike.dir, 0, 0,
 	                       bike.transp, arena_bg, 320);
 
-	      if (dbg_pending) {
+	      LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+							 BIKE_W, BIKE_H, arena_bg, 320);
+		  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
+				  	  	   bike2.sheet, 8, (int)bike2.dir, 0, 0,
+						   bike2.transp, arena_bg, 320);
+
+	      /*if (dbg_pending) {
 	          dbg_pending = 0;
 	          char dbg[80];
 	          int n = snprintf(dbg, sizeof(dbg),
@@ -316,7 +361,24 @@ int main(void)
 	              dbg_copy[4], dbg_copy[5], dbg_copy[0], dbg_copy[1],
 	              dbg_copy[6], dbg_copy[7], dbg_copy[2], dbg_copy[3]);
 	          HAL_UART_Transmit(&huart2, (uint8_t *)dbg, n, HAL_MAX_DELAY);
+	      }*/
+
+	      char msg[3];
+	      uint8_t val = 0;
+
+	      if ((prev_val == snap.j1_no)/* || (prev_vel == snap.j2_no)*/) {
+	    	  //prev_val = snap.j1_no;
+	      }else if (snap.j1_no){
+	    	  val = snprintf(msg, sizeof(msg), "%u", 5);
+	    	  prev_val = snap.j1_no;
+	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	      }else{
+	    	  val = snprintf(msg, sizeof(msg), "%u", 4);
+	    	  prev_val = snap.j1_no;
+	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 	      }
+
+	      HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
 	      HAL_Delay(15);
 
@@ -479,6 +541,39 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -552,7 +647,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
             memcpy((void *)&datosJugadores, rx_payload, sizeof(datosJugadores));
             sincronizado = 0;
 
-            char dbg[80];
             memcpy(dbg_copy, rx_payload, 8);
             dbg_pending = 1;
 
