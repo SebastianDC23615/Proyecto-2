@@ -444,6 +444,12 @@ void LCD_Sprite(int x, int y, int width, int height, const uint16_t *bitmap,
 // bg / bgWidth: bitmap de fondo completo y su ancho en píxeles
 //***************************************************************************************************************************************
 
+// Import the arena map from main.c so the display knows where the traces are
+extern uint8_t arena_map[120][160];
+
+extern uint16_t p1_trace_color;
+extern uint16_t p2_trace_color;
+
 static uint8_t _slbuf[320 * 2];
 
 static void _restore_bg_rect(int x, int y, int w, int h,
@@ -456,14 +462,23 @@ static void _restore_bg_rect(int x, int y, int w, int h,
 
 	for (int j = 0; j < h; j++){
 		for (int i = 0; i < w; i++){
-			uint16_t px;
-			if ((x + i == trail_sx0 && y + j == trail_sy0) ||
-				(x + i == trail_sx1 && y + j == trail_sy1))
-				px = trail_color;
-			else
-				px = bg[(y + j) * bgWidth + (x + i)];
-			_slbuf[i * 2]     = px >> 8;       // ADD THIS LINE
-			_slbuf[i * 2 + 1] = px & 0xFF;     // ADD THIS LINE
+            int px_x = x + i;
+            int px_y = y + j;
+            uint16_t px;
+
+            // Map the screen coordinates to the 160x120 array (ARENA_X0=3, ARENA_Y0=41)
+            int map_x = (px_x - 3) / 2;
+            int map_y = (px_y - 41) / 2;
+
+            // Check if there is a trace here, otherwise draw the normal background
+            if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
+            	px = (arena_map[map_y][map_x] == 1) ? p1_trace_color : p2_trace_color;
+            } else {
+                px = bg[px_y * bgWidth + px_x];
+            }
+
+			_slbuf[i * 2]     = px >> 8;
+			_slbuf[i * 2 + 1] = px & 0xFF;
 		}
 
 		SetWindows(x, y+j, x+w-1, y+j);
@@ -471,7 +486,6 @@ static void _restore_bg_rect(int x, int y, int w, int h,
 		LCD_CS_L();
 		HAL_SPI_Transmit(&hspi1, _slbuf, w*2, HAL_MAX_DELAY);
 		LCD_CS_H();
-
 	}
 }
 
@@ -482,8 +496,20 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
     int ancho = width * columns;
 
     for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {		// width - 1
-            uint16_t px = bg[(y + j) * bgWidth + (x + i)];
+        for (int i = 0; i < width; i++) {
+            int px_x = x + i;
+            int px_y = y + j;
+            int map_x = (px_x - 3) / 2;
+            int map_y = (px_y - 41) / 2;
+            uint16_t px;
+
+            // Read from the map so the trace composites UNDER the transparent parts of the bike
+            if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
+            	px = (arena_map[map_y][map_x] == 1) ? p1_trace_color : p2_trace_color;
+            } else {
+                px = bg[px_y * bgWidth + px_x];
+            }
+
             _slbuf[i * 2]     = px >> 8;
             _slbuf[i * 2 + 1] = px & 0xFF;
         }

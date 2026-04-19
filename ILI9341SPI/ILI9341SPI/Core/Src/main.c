@@ -78,6 +78,9 @@ typedef struct {
 #define ARENA_X1      316
 #define ARENA_Y1      236
 
+#define ARENA_W_TILES 160
+#define ARENA_H_TILES 120
+
 #define BIKE_W        16
 #define BIKE_H        16
 #define BIKE_TRANSP   0x0263 // #004D19
@@ -123,7 +126,10 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
-const uint64_t traces[];
+uint8_t arena_map[ARENA_H_TILES][ARENA_W_TILES];
+
+uint16_t p1_trace_color;
+uint16_t p2_trace_color;
 
 /* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
 uint8_t           rx_byte;            /* 1-byte slot for sync hunt     */
@@ -143,6 +149,7 @@ static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void DrawTraceAndMarkMap(int cx, int cy, uint16_t color, uint8_t player_id);
 
 /* USER CODE END PFP */
 
@@ -153,16 +160,9 @@ static void MX_USART3_UART_Init(void);
  * for the two pixels baked into each direction's sprite at the trailing edge.
  * Used by LCD_RestoreBgDelta to leave those pixels on-screen as permanent wall. */
 typedef struct { int8_t dx0, dy0, dx1, dy1; } TrailOffsets;
-static const TrailOffsets trail_for_dir[4] = {
-    /* DIR_UP    */ {  7, 15,  8, 15 },
-    /* DIR_LEFT  */ { 15,  7, 15,  8 },
-    /* DIR_DOWN  */ {  7,  0,  8,  0 },
-    /* DIR_RIGHT */ {  0,  7,  0,  8 },
-};
 
 /* 1 byte per arena pixel — 0=empty, 1=trail present.
  * Indexed [y - ARENA_Y0][x - ARENA_X0]. Must be global (not stack). */
-static uint8_t trace_map[ARENA_Y1 - ARENA_Y0 + 1][ARENA_X1 - ARENA_X0 + 1];
 
 /* Hitbox geometry per facing. Indexed by BikeDir (UP=0, LEFT=1, DOWN=2,
  * RIGHT=3) so a lookup is just hitbox_for_dir[bike.dir]. Kept read-only
@@ -259,11 +259,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 	  LCD_Init();
+	  LCD_Clear(0x0000);
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
 
 	  struct_mensaje snap = datosJugadores;
 	  uint8_t p_j1 = snap.j1_no;
 	  uint8_t p_j2 = snap.j2_no;
+
+	  memset(arena_map, 0, sizeof(arena_map));
 
 	  char msg[3];
 	  uint8_t val = 0;
@@ -275,28 +278,31 @@ int main(void)
 	   * Designed so a future second bike is just another Bike struct, and a
 	   * future input layer only needs to overwrite bike.dir each frame. */
 	  Bike bike = {
-	      .x           = BIKE_X_MIN,
-	      .y           = BIKE_Y_MIN,
-	      .prev_x      = BIKE_X_MIN,
-	      .prev_y      = BIKE_Y_MIN,
-	      .dir         = DIR_RIGHT,
-	      .speed       = BIKE_SPEED_NORMAL,      /* changed from =1 */
-	      .sheet       = bike_kevinflyn,
-	      .transp      = BIKE_TRANSP,
-	      .trail_color = 0x07FF,                 /* NEW: cyan */
+		  .x           = BIKE_X_MIN,
+		  .y           = BIKE_Y_MIN,
+		  .prev_x      = BIKE_X_MIN,
+		  .prev_y      = BIKE_Y_MIN,
+		  .dir         = DIR_RIGHT,
+		  .speed       = BIKE_SPEED_NORMAL,
+		  .sheet       = bike_kevinflyn,
+		  .transp      = BIKE_TRANSP,
 	  };
 
 	  Bike bike2 = {
-	      .x           = BIKE_X_MAX,              /* changed from =284 */
-	      .y           = BIKE_Y_MAX,              /* changed from =204 */
-	      .prev_x      = BIKE_X_MAX,              /* changed from =284 */
-	      .prev_y      = BIKE_Y_MAX,              /* changed from =204 */
-	      .dir         = DIR_LEFT,
-	      .speed       = BIKE_SPEED_NORMAL,       /* changed from =1 */
-	      .sheet       = bike_ares,
-	      .transp      = BIKE_TRANSP,
-	      .trail_color = 0xFD20,                  /* NEW: orange */
+		  .x           = BIKE_X_MAX,
+		  .y           = BIKE_Y_MAX,
+		  .prev_x      = BIKE_X_MAX,
+		  .prev_y      = BIKE_Y_MAX,
+		  .dir         = DIR_LEFT,
+		  .speed       = BIKE_SPEED_NORMAL,
+		  .sheet       = bike_ares,
+		  .transp      = BIKE_TRANSP,
 	  };
+
+	  p1_trace_color = bike.sheet[1928];
+	  p2_trace_color = bike2.sheet[1928];
+	  bike.trail_color = p1_trace_color;
+	  bike2.trail_color = p2_trace_color;
 
 
 	  /* Paint the bike once at its spawn so frame 1's restore has something to
@@ -318,129 +324,138 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	  while (1) {
-	      /* 1. Pull latest joystick snapshot into locals. The volatile read
-	       *    is a single-frame latch — if a UART IRQ fires mid-frame, we
-	       *    use the OLD snapshot for this frame and pick up the new one
-	       *    next frame, which is fine at 50 ms UART cadence vs 15 ms frames. */
-	      struct_mensaje snap = datosJugadores;
+	while (1) {
+		/* 1. Pull latest joystick snapshot into locals. The volatile read
+		 *    is a single-frame latch — if a UART IRQ fires mid-frame, we
+		 *    use the OLD snapshot for this frame and pick up the new one
+		 *    next frame, which is fine at 50 ms UART cadence vs 15 ms frames. */
+		struct_mensaje snap = datosJugadores;
 
-	      // mapear cada jugador a variables de struct con inputs de controles
-	      input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no,
-	                    &bike.dir, &bike.speed);
-	      input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no,
-                  	  	&bike2.dir, &bike2.speed);
+		// mapear cada jugador a variables de struct con inputs de controles
+		input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
+				&bike.speed);
+		input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
+				&bike2.speed);
 
-	      // Mover hacia nueva posicion segun velocidad y cambiar direccion de sprite
-	      bike.prev_x = bike.x;
-	      bike2.prev_x = bike2.x;
-	      bike.prev_y = bike.y;
-	      bike2.prev_y = bike2.y;
-	      switch (bike.dir) {
-	          case DIR_RIGHT: bike.x += bike.speed; break;
-	          case DIR_LEFT:  bike.x -= bike.speed; break;
-	          case DIR_DOWN:  bike.y += bike.speed; break;
-	          case DIR_UP:    bike.y -= bike.speed; break;
-	      }
-	      switch (bike2.dir) {
-				  case DIR_RIGHT: bike2.x += bike2.speed; break;
-				  case DIR_LEFT:  bike2.x -= bike2.speed; break;
-				  case DIR_DOWN:  bike2.y += bike2.speed; break;
-				  case DIR_UP:    bike2.y -= bike2.speed; break;
-			  }
+		// Mover hacia nueva posicion segun velocidad y cambiar direccion de sprite
+		bike.prev_x = bike.x;
+		bike2.prev_x = bike2.x;
+		bike.prev_y = bike.y;
+		bike2.prev_y = bike2.y;
 
+		// PLAYER 1
+		int steps1 = bike.speed / 2;
+		for (int s = 0; s < steps1; s++) {
+		    int screen_cx = bike.x + 7;   // exact center pixel X
+		    int screen_cy = bike.y + 7;   // exact center pixel Y
 
-	      // hard limits de la arena jugable
-	      if (bike.x < BIKE_X_MIN) bike.x = BIKE_X_MIN;
-	      if (bike.x > BIKE_X_MAX) bike.x = BIKE_X_MAX;
-	      if (bike.y < BIKE_Y_MIN) bike.y = BIKE_Y_MIN;
-	      if (bike.y > BIKE_Y_MAX) bike.y = BIKE_Y_MAX;
+		    // Round to nearest cell instead of flooring
+		    int mx1 = (screen_cx - ARENA_X0) / 2;
+		    int my1 = (screen_cy - ARENA_Y0) / 2;
 
-	      if (bike2.x < BIKE_X_MIN) bike2.x = BIKE_X_MIN;
-		  if (bike2.x > BIKE_X_MAX) bike2.x = BIKE_X_MAX;
-		  if (bike2.y < BIKE_Y_MIN) bike2.y = BIKE_Y_MIN;
-		  if (bike2.y > BIKE_Y_MAX) bike2.y = BIKE_Y_MAX;
+		    // Clamp and write
+		    if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES)
+		        arena_map[my1][mx1] = 1;
 
-	      // Restaurar fondo y volver a mostrar motos
-		  {const TrailOffsets *t1 = &trail_for_dir[bike.dir];
-		  int tsx0 = bike.prev_x + t1->dx0, tsy0 = bike.prev_y + t1->dy0;
-		  int tsx1 = bike.prev_x + t1->dx1, tsy1 = bike.prev_y + t1->dy1;
-		  if (tsx0 >= ARENA_X0 && tsx0 <= ARENA_X1 && tsy0 >= ARENA_Y0 && tsy0 <= ARENA_Y1)
-			  trace_map[tsy0 - ARENA_Y0][tsx0 - ARENA_X0] = 1;
-		  if (tsx1 >= ARENA_X0 && tsx1 <= ARENA_X1 && tsy1 >= ARENA_Y0 && tsy1 <= ARENA_Y1)
-			  trace_map[tsy1 - ARENA_Y0][tsx1 - ARENA_X0] = 1;
-		  LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
-							 BIKE_W, BIKE_H, arena_bg, 320,
-							 tsx0, tsy0, tsx1, tsy1, bike.trail_color);}
-	      LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
-	                       bike.sheet, 8, (int)bike.dir, 0, 0,
-	                       bike.transp, arena_bg, 320);
+		    switch (bike.dir) {
+		        case DIR_RIGHT: bike.x += 2; break;
+		        case DIR_LEFT:  bike.x -= 2; break;
+		        case DIR_DOWN:  bike.y += 2; break;
+		        case DIR_UP:    bike.y -= 2; break;
+		    }
+		}
 
-	      {const TrailOffsets *t2 = &trail_for_dir[bike2.dir];
-		  int tsx0 = bike2.prev_x + t2->dx0, tsy0 = bike2.prev_y + t2->dy0;
-		  int tsx1 = bike2.prev_x + t2->dx1, tsy1 = bike2.prev_y + t2->dy1;
-		  if (tsx0 >= ARENA_X0 && tsx0 <= ARENA_X1 && tsy0 >= ARENA_Y0 && tsy0 <= ARENA_Y1)
-			  trace_map[tsy0 - ARENA_Y0][tsx0 - ARENA_X0] = 1;
-		  if (tsx1 >= ARENA_X0 && tsx1 <= ARENA_X1 && tsy1 >= ARENA_Y0 && tsy1 <= ARENA_Y1)
-			  trace_map[tsy1 - ARENA_Y0][tsx1 - ARENA_X0] = 1;
-		  LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
-							 BIKE_W, BIKE_H, arena_bg, 320,
-							 tsx0, tsy0, tsx1, tsy1, bike2.trail_color);}
-		  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
-				  	  	   bike2.sheet, 8, (int)bike2.dir, 0, 0,
-						   bike2.transp, arena_bg, 320);
+		// PLAYER 2
+		int steps2 = bike2.speed / 2;
+		for (int s = 0; s < steps2; s++) {
+		    int screen_cx2 = bike2.x + 8;
+		    int screen_cy2 = bike2.y + 8;
 
-	      /*if (dbg_pending) {
-	          dbg_pending = 0;
-	          char dbg[80];
-	          int n = snprintf(dbg, sizeof(dbg),
-	              "J1 x=%3u y=%3u A=%u B=%u | J2 x=%3u y=%3u A=%u B=%u\r\n",
-	              dbg_copy[4], dbg_copy[5], dbg_copy[0], dbg_copy[1],
-	              dbg_copy[6], dbg_copy[7], dbg_copy[2], dbg_copy[3]);
-	          HAL_UART_Transmit(&huart2, (uint8_t *)dbg, n, HAL_MAX_DELAY);
-	      }*/
+		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
+		    int my2 = (screen_cy2 - ARENA_Y0) / 2;
 
-	      char msg[3];
-	      uint8_t val = 0;
+		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES)
+		        arena_map[my2][mx2] = 2;
 
-	      if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+		    switch (bike2.dir) {
+		        case DIR_RIGHT: bike2.x += 2; break;
+		        case DIR_LEFT:  bike2.x -= 2; break;
+		        case DIR_DOWN:  bike2.y += 2; break;
+		        case DIR_UP:    bike2.y -= 2; break;
+		    }
+		}
 
-	          if ((snap.j1_no == 0) && (snap.j2_no == 0)){
-	              val = snprintf(msg, sizeof(msg), "%u", 4);
-	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	          } else if ((p_j1 != 1) || (p_j2 != 1)){
-	              val = snprintf(msg, sizeof(msg), "%u", 5);
-	              HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	              HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	          }
+		// hard limits de la arena jugable
+		if (bike.x < BIKE_X_MIN)
+			bike.x = BIKE_X_MIN;
+		if (bike.x > BIKE_X_MAX)
+			bike.x = BIKE_X_MAX;
+		if (bike.y < BIKE_Y_MIN)
+			bike.y = BIKE_Y_MIN;
+		if (bike.y > BIKE_Y_MAX)
+			bike.y = BIKE_Y_MAX;
 
-	          p_j1 = snap.j1_no;
-	          p_j2 = snap.j2_no;
-	      }
+		if (bike2.x < BIKE_X_MIN)
+			bike2.x = BIKE_X_MIN;
+		if (bike2.x > BIKE_X_MAX)
+			bike2.x = BIKE_X_MAX;
+		if (bike2.y < BIKE_Y_MIN)
+			bike2.y = BIKE_Y_MIN;
+		if (bike2.y > BIKE_Y_MAX)
+			bike2.y = BIKE_Y_MAX;
 
+		// Restaurar fondo y volver a mostrar motos
+		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
 
-	      /*if ((prev_val == snap.j1_no)) {
-	    	  //prev_val = snap.j1_no;
-	      }else if (snap.j1_no){
-	    	  val = snprintf(msg, sizeof(msg), "%u", 5);
-	    	  prev_val = snap.j1_no;
-	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	    	  HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	      }else{
-	    	  val = snprintf(msg, sizeof(msg), "%u", 4);
-	    	  prev_val = snap.j1_no;
-	    	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	    	  HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	      }*/
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
+				(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
 
-	      HAL_Delay(15);
+		LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
 
-    /* USER CODE END WHILE */
+		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
+				(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
 
-    /* USER CODE BEGIN 3 */
+		char msg[3];
+		uint8_t val = 0;
+
+		if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+
+			if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
+				val = snprintf(msg, sizeof(msg), "%u", 4);
+				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+			} else if ((p_j1 != 1) || (p_j2 != 1)) {
+				val = snprintf(msg, sizeof(msg), "%u", 5);
+				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+			}
+
+			p_j1 = snap.j1_no;
+			p_j2 = snap.j2_no;
+		}
+
+		/*if ((prev_val == snap.j1_no)) {
+		 //prev_val = snap.j1_no;
+		 }else if (snap.j1_no){
+		 val = snprintf(msg, sizeof(msg), "%u", 5);
+		 prev_val = snap.j1_no;
+		 HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		 HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		 }else{
+		 val = snprintf(msg, sizeof(msg), "%u", 4);
+		 prev_val = snap.j1_no;
+		 HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		 HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		 }*/
+
+		HAL_Delay(15);
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END WHILE */
+
+	/* USER CODE BEGIN 3 */
+	/* USER CODE END 3 */
 }
 
 /**
@@ -688,8 +703,7 @@ static void MX_GPIO_Init(void)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART1) {
-        if (sincronizado == 0) {
-            /* Hunting for the 0xAA sync byte. */
+        if (!sincronizado) {
             if (rx_byte == 0xAA) {
                 sincronizado = 1;
                 HAL_UART_Receive_IT(&huart1, rx_payload, 8);
