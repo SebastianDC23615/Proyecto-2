@@ -73,8 +73,8 @@ typedef struct {
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 /* Playfield: inclusive pixel bounds the bike's body must stay inside. */
-#define ARENA_X0      3
-#define ARENA_Y0      41
+#define ARENA_X0      2
+#define ARENA_Y0      40
 #define ARENA_X1      316
 #define ARENA_Y1      236
 
@@ -100,8 +100,8 @@ typedef struct {
  * leading edge along the direction of travel. */
 #define BIKE_X_MIN    ARENA_X0
 #define BIKE_Y_MIN    ARENA_Y0
-#define BIKE_X_MAX    (ARENA_X1 - BIKE_W + 1)   /* 316 - 32 + 1 = 285 */
-#define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H + 1)   /* 236 - 32 + 1 = 205 */
+#define BIKE_X_MAX    (ARENA_X1 - BIKE_W)   /* 316 - 32 + 1 = 285 */
+#define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H)   /* 236 - 32 + 1 = 205 */
 
 
 #define JOY_CENTER       127
@@ -368,8 +368,8 @@ int main(void)
 		// PLAYER 2
 		int steps2 = bike2.speed / 2;
 		for (int s = 0; s < steps2; s++) {
-		    int screen_cx2 = bike2.x + 8;
-		    int screen_cy2 = bike2.y + 8;
+		    int screen_cx2 = bike2.x + 7;
+		    int screen_cy2 = bike2.y + 7;
 
 		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
 		    int my2 = (screen_cy2 - ARENA_Y0) / 2;

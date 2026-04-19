@@ -3733,24 +3733,24 @@ LOAD C:/ST/STM32CubeIDE_2.1.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.exte
  .debug_line    0x000096bc     0x1cbd ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.o
  .debug_line    0x0000b379     0x256a ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
-.debug_str      0x00000000    0xcece0
- .debug_str     0x00000000    0xcece0 ./Core/Src/graficos.o
+.debug_str      0x00000000    0xcecd8
+ .debug_str     0x00000000    0xcecd8 ./Core/Src/graficos.o
                                0x5dae (size before relaxing)
- .debug_str     0x000cece0    0xcb5f6 ./Core/Src/ili9341.o
- .debug_str     0x000cece0    0xc86ec ./Core/Src/main.o
- .debug_str     0x000cece0    0xc4a33 ./Core/Src/stm32f4xx_hal_msp.o
- .debug_str     0x000cece0    0xc41e2 ./Core/Src/stm32f4xx_it.o
- .debug_str     0x000cece0     0x772e ./Core/Src/sysmem.o
- .debug_str     0x000cece0    0xc3cca ./Core/Src/system_stm32f4xx.o
- .debug_str     0x000cece0       0xa6 ./Core/Startup/startup_stm32f446retx.o
- .debug_str     0x000cece0    0xc488f ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
- .debug_str     0x000cece0    0xc45e6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
- .debug_str     0x000cece0    0xc40bf ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
- .debug_str     0x000cece0    0xc3e45 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
- .debug_str     0x000cece0    0xc4103 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
- .debug_str     0x000cece0    0xc4136 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.o
- .debug_str     0x000cece0    0xc4563 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.o
- .debug_str     0x000cece0    0xc46ba ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_str     0x000cecd8    0xcb5f6 ./Core/Src/ili9341.o
+ .debug_str     0x000cecd8    0xc86e4 ./Core/Src/main.o
+ .debug_str     0x000cecd8    0xc4a33 ./Core/Src/stm32f4xx_hal_msp.o
+ .debug_str     0x000cecd8    0xc41e2 ./Core/Src/stm32f4xx_it.o
+ .debug_str     0x000cecd8     0x772e ./Core/Src/sysmem.o
+ .debug_str     0x000cecd8    0xc3cca ./Core/Src/system_stm32f4xx.o
+ .debug_str     0x000cecd8       0xa6 ./Core/Startup/startup_stm32f446retx.o
+ .debug_str     0x000cecd8    0xc488f ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_str     0x000cecd8    0xc45e6 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_str     0x000cecd8    0xc40bf ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_str     0x000cecd8    0xc3e45 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_str     0x000cecd8    0xc4103 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_str     0x000cecd8    0xc4136 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.o
+ .debug_str     0x000cecd8    0xc4563 ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.o
+ .debug_str     0x000cecd8    0xc46ba ./Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
 .comment        0x00000000       0x43
  .comment       0x00000000       0x43 ./Core/Src/graficos.o
