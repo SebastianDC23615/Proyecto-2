@@ -46,6 +46,7 @@ typedef struct {
     int             speed;         /* pixels per frame */
     const uint16_t *sheet;         /* 8-column sprite sheet for this character */
     uint16_t        transp;        /* transparent color key for this sheet */
+    uint16_t 		trail_color;   /* RGB565 color written as permanent wall pixel */
 } Bike;
 
 /* Hitbox rectangle expressed as an offset from the sprite top-left
@@ -77,8 +78,8 @@ typedef struct {
 #define ARENA_X1      316
 #define ARENA_Y1      236
 
-#define BIKE_W        32
-#define BIKE_H        32
+#define BIKE_W        16
+#define BIKE_H        16
 #define BIKE_TRANSP   0x0263 // #004D19
 
 /* Collision hitbox: narrow rectangle centered in the 32x32 sprite box.
@@ -87,7 +88,7 @@ typedef struct {
  * Used by trail laying and collision — NOT by rendering (the sprite is
  * still drawn as a full 32x32 composite). */
 #define HITBOX_LONG   BIKE_W                          /* 32, along heading */
-#define HITBOX_SHORT  14                              /* perp. to heading  */
+#define HITBOX_SHORT  6                              /* perp. to heading  */
 #define HITBOX_INSET  ((BIKE_W - HITBOX_SHORT) / 2)   /* = 9               */
 
 /* Bounds for the bike's sprite top-left so its body stays in the arena.
@@ -103,9 +104,8 @@ typedef struct {
 #define JOY_CENTER       127
 #define JOY_DEADZONE      80
 
-#define BIKE_SPEED_SLOW    1
 #define BIKE_SPEED_NORMAL  2
-#define BIKE_SPEED_FAST    5
+#define BIKE_SPEED_FAST    4
 
 /* USER CODE END PD */
 
@@ -123,8 +123,6 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
-extern const uint16_t arena_bg[];
-
 const uint64_t traces[];
 
 /* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
@@ -150,6 +148,22 @@ static void MX_USART3_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* Trail pixel offsets (local 0-indexed coords within the sprite frame)
+ * for the two pixels baked into each direction's sprite at the trailing edge.
+ * Used by LCD_RestoreBgDelta to leave those pixels on-screen as permanent wall. */
+typedef struct { int8_t dx0, dy0, dx1, dy1; } TrailOffsets;
+static const TrailOffsets trail_for_dir[4] = {
+    /* DIR_UP    */ {  7, 15,  8, 15 },
+    /* DIR_LEFT  */ { 15,  7, 15,  8 },
+    /* DIR_DOWN  */ {  7,  0,  8,  0 },
+    /* DIR_RIGHT */ {  0,  7,  0,  8 },
+};
+
+/* 1 byte per arena pixel — 0=empty, 1=trail present.
+ * Indexed [y - ARENA_Y0][x - ARENA_X0]. Must be global (not stack). */
+static uint8_t trace_map[ARENA_Y1 - ARENA_Y0 + 1][ARENA_X1 - ARENA_X0 + 1];
+
 /* Hitbox geometry per facing. Indexed by BikeDir (UP=0, LEFT=1, DOWN=2,
  * RIGHT=3) so a lookup is just hitbox_for_dir[bike.dir]. Kept read-only
  * in flash. When you add a new sprite that needs a different hitbox,
@@ -202,9 +216,8 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
     if (!is_reverse) *io_dir = requested;
 
     /* Speed: slow takes priority if both buttons are pressed. */
-    if (btn_slow)      *out_speed = BIKE_SPEED_SLOW;
-    else if (btn_fast) *out_speed = BIKE_SPEED_FAST;
-    else               *out_speed = BIKE_SPEED_NORMAL;
+    if (btn_fast) *out_speed = BIKE_SPEED_FAST;
+    else *out_speed = BIKE_SPEED_NORMAL;
 }
 
 
@@ -262,25 +275,27 @@ int main(void)
 	   * Designed so a future second bike is just another Bike struct, and a
 	   * future input layer only needs to overwrite bike.dir each frame. */
 	  Bike bike = {
-		  .x      = BIKE_X_MIN,
-		  .y      = BIKE_Y_MIN,
-		  .prev_x = BIKE_X_MIN,
-		  .prev_y = BIKE_Y_MIN,
-		  .dir    = DIR_RIGHT,
-		  .speed  = 1,
-		  .sheet  = bike_kevinflyn,
-		  .transp = BIKE_TRANSP,
+	      .x           = BIKE_X_MIN,
+	      .y           = BIKE_Y_MIN,
+	      .prev_x      = BIKE_X_MIN,
+	      .prev_y      = BIKE_Y_MIN,
+	      .dir         = DIR_RIGHT,
+	      .speed       = BIKE_SPEED_NORMAL,      /* changed from =1 */
+	      .sheet       = bike_kevinflyn,
+	      .transp      = BIKE_TRANSP,
+	      .trail_color = 0x07FF,                 /* NEW: cyan */
 	  };
 
 	  Bike bike2 = {
-		  .x      = 284,
-		  .y      = 204,
-		  .prev_x = 284,
-		  .prev_y = 204,
-		  .dir    = DIR_LEFT,
-		  .speed  = 1,
-		  .sheet  = bike_ares,
-		  .transp = BIKE_TRANSP,
+	      .x           = BIKE_X_MAX,              /* changed from =284 */
+	      .y           = BIKE_Y_MAX,              /* changed from =204 */
+	      .prev_x      = BIKE_X_MAX,              /* changed from =284 */
+	      .prev_y      = BIKE_Y_MAX,              /* changed from =204 */
+	      .dir         = DIR_LEFT,
+	      .speed       = BIKE_SPEED_NORMAL,       /* changed from =1 */
+	      .sheet       = bike_ares,
+	      .transp      = BIKE_TRANSP,
+	      .trail_color = 0xFD20,                  /* NEW: orange */
 	  };
 
 
@@ -347,14 +362,30 @@ int main(void)
 		  if (bike2.y > BIKE_Y_MAX) bike2.y = BIKE_Y_MAX;
 
 	      // Restaurar fondo y volver a mostrar motos
-	      LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
-	                         BIKE_W, BIKE_H, arena_bg, 320);
+		  {const TrailOffsets *t1 = &trail_for_dir[bike.dir];
+		  int tsx0 = bike.prev_x + t1->dx0, tsy0 = bike.prev_y + t1->dy0;
+		  int tsx1 = bike.prev_x + t1->dx1, tsy1 = bike.prev_y + t1->dy1;
+		  if (tsx0 >= ARENA_X0 && tsx0 <= ARENA_X1 && tsy0 >= ARENA_Y0 && tsy0 <= ARENA_Y1)
+			  trace_map[tsy0 - ARENA_Y0][tsx0 - ARENA_X0] = 1;
+		  if (tsx1 >= ARENA_X0 && tsx1 <= ARENA_X1 && tsy1 >= ARENA_Y0 && tsy1 <= ARENA_Y1)
+			  trace_map[tsy1 - ARENA_Y0][tsx1 - ARENA_X0] = 1;
+		  LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+							 BIKE_W, BIKE_H, arena_bg, 320,
+							 tsx0, tsy0, tsx1, tsy1, bike.trail_color);}
 	      LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
 	                       bike.sheet, 8, (int)bike.dir, 0, 0,
 	                       bike.transp, arena_bg, 320);
 
-	      LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
-							 BIKE_W, BIKE_H, arena_bg, 320);
+	      {const TrailOffsets *t2 = &trail_for_dir[bike2.dir];
+		  int tsx0 = bike2.prev_x + t2->dx0, tsy0 = bike2.prev_y + t2->dy0;
+		  int tsx1 = bike2.prev_x + t2->dx1, tsy1 = bike2.prev_y + t2->dy1;
+		  if (tsx0 >= ARENA_X0 && tsx0 <= ARENA_X1 && tsy0 >= ARENA_Y0 && tsy0 <= ARENA_Y1)
+			  trace_map[tsy0 - ARENA_Y0][tsx0 - ARENA_X0] = 1;
+		  if (tsx1 >= ARENA_X0 && tsx1 <= ARENA_X1 && tsy1 >= ARENA_Y0 && tsy1 <= ARENA_Y1)
+			  trace_map[tsy1 - ARENA_Y0][tsx1 - ARENA_X0] = 1;
+		  LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+							 BIKE_W, BIKE_H, arena_bg, 320,
+							 tsx0, tsy0, tsx1, tsy1, bike2.trail_color);}
 		  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
 				  	  	   bike2.sheet, 8, (int)bike2.dir, 0, 0,
 						   bike2.transp, arena_bg, 320);

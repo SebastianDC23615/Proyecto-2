@@ -12,5 +12,5 @@
 ../Core/Src/ili9341.c:373:6:LCD_BitmapTransparent	40	static
 ../Core/Src/ili9341.c:396:6:LCD_Sprite	64	static
 ../Core/Src/ili9341.c:449:13:_restore_bg_rect	48	static
-../Core/Src/ili9341.c:468:6:LCD_SpriteOverBg	64	static
-../Core/Src/ili9341.c:510:6:LCD_RestoreBgDelta	48	static
+../Core/Src/ili9341.c:478:6:LCD_SpriteOverBg	64	static
+../Core/Src/ili9341.c:520:6:LCD_RestoreBgDelta	72	static

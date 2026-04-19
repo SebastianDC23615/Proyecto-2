@@ -446,14 +446,24 @@ void LCD_Sprite(int x, int y, int width, int height, const uint16_t *bitmap,
 
 static uint8_t _slbuf[320 * 2];
 
-static void _restore_bg_rect(int x, int y, int w, int h, const uint16_t *bg, unsigned int bgWidth){
+static void _restore_bg_rect(int x, int y, int w, int h,
+                              const uint16_t *bg, unsigned int bgWidth,
+                              int trail_sx0, int trail_sy0,
+                              int trail_sx1, int trail_sy1,
+                              uint16_t trail_color){
+
 	if (w <= 0 || h <= 0) return;
 
 	for (int j = 0; j < h; j++){
 		for (int i = 0; i < w; i++){
-			uint16_t px = bg[(y + j) * bgWidth + (x + i)];
-			_slbuf[i * 2] = px >> 8;
-			_slbuf[i * 2 + 1] = px & 0xFF;
+			uint16_t px;
+			if ((x + i == trail_sx0 && y + j == trail_sy0) ||
+				(x + i == trail_sx1 && y + j == trail_sy1))
+				px = trail_color;
+			else
+				px = bg[(y + j) * bgWidth + (x + i)];
+			_slbuf[i * 2]     = px >> 8;       // ADD THIS LINE
+			_slbuf[i * 2 + 1] = px & 0xFF;     // ADD THIS LINE
 		}
 
 		SetWindows(x, y+j, x+w-1, y+j);
@@ -508,22 +518,28 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
 }
 
 void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
-						int w, int h,
-                        const uint16_t *bg, unsigned int bgWidth) {
+                        int w, int h,
+                        const uint16_t *bg, unsigned int bgWidth,
+                        int trail_sx0, int trail_sy0,
+                        int trail_sx1, int trail_sy1,
+                        uint16_t trail_color) {
     int dx = new_x - old_x;
     int dy = new_y - old_y;
 
     if (dx == 0 && dy == 0) return;
 
     if (dx >= w || dx <= -w || dy >= h || dy <= -h){
-    	_restore_bg_rect(old_x, old_y, w, h, bg, bgWidth);
+    	_restore_bg_rect(old_x, old_y, w, h, bg, bgWidth,
+    	                 trail_sx0, trail_sy0, trail_sx1, trail_sy1, trail_color);
     	return;
     }
 
     if (dy > 0){
-    	_restore_bg_rect(old_x, old_y, w, dy, bg, bgWidth);
+    	_restore_bg_rect(old_x, old_y, w, dy, bg, bgWidth,
+                trail_sx0, trail_sy0, trail_sx1, trail_sy1, trail_color);
     }else if (dy < 0){
-    	_restore_bg_rect(old_x, old_y + h + dy, w, -dy, bg, bgWidth);
+    	_restore_bg_rect(old_x, old_y + h + dy, w, -dy, bg, bgWidth,
+    	        trail_sx0, trail_sy0, trail_sx1, trail_sy1, trail_color);
     }
 
     int v_y = old_y;
@@ -538,8 +554,10 @@ void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
     }
 
     if (dx > 0){
-    	_restore_bg_rect(old_x, v_y, dx, h, bg, bgWidth);
+    	_restore_bg_rect(old_x, v_y, dx, h, bg, bgWidth,
+    	         trail_sx0, trail_sy0, trail_sx1, trail_sy1, trail_color);
     }else if (dx < 0){
-    	_restore_bg_rect(old_x + w + dx, v_y, -dx, v_h, bg, bgWidth);
+    	_restore_bg_rect(old_x + w + dx, v_y, -dx, v_h, bg, bgWidth,
+    	         trail_sx0, trail_sy0, trail_sx1, trail_sy1, trail_color);
     }
 }
