@@ -48,6 +48,7 @@ typedef struct {
     uint16_t        transp;
     uint16_t 		trail_color;
     int				lives;
+    const uint16_t *icon;
 } Bike;
 
 typedef struct {
@@ -71,14 +72,10 @@ typedef struct {
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-
-
-
-
 #define ARENA_X0      2
 #define ARENA_Y0      36
-#define ARENA_X1      317
-#define ARENA_Y1      237
+#define ARENA_X1      316
+#define ARENA_Y1      236
 
 #define ARENA_W_TILES 160
 #define ARENA_H_TILES 120
@@ -130,19 +127,23 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
 extern const uint16_t cinematic[];
-extern const uint16_t main_menu[];
+//extern const uint16_t main_menu[];
 
-// NEW: Character Selection Assets
-//extern const uint16_t car_sel_bg[];
 extern const uint16_t car_sel[];
 
-// NEW: Bike sprite sheets
 extern const uint16_t bike_blue[];
 extern const uint16_t bike_samflyn[];
 extern const uint16_t bike_kevinflyn[];
 extern const uint16_t bike_orange[];
 extern const uint16_t bike_clu[];
 extern const uint16_t bike_ares[];
+
+extern const uint16_t icon_blue[];
+extern const uint16_t icon_orange[];
+extern const uint16_t icon_sam[];
+extern const uint16_t icon_flyn[];
+extern const uint16_t icon_clu[];
+extern const uint16_t icon_ares[];
 
 uint8_t arena_map[ARENA_H_TILES][ARENA_W_TILES];
 
@@ -241,6 +242,28 @@ void Load_Scores() {
     }
 }
 
+// Lives icon logic
+
+void Draw_Dashboard(Bike *b1, Bike *b2) {
+    for (int i = 0; i < 4; i++) {
+        int x1 = 2 + i * 32;
+        int x2 = 286 - i * 32;
+        if (i < b1->lives)
+            LCD_SpriteOverBg(x1, 2, 32, 32, b1->icon, 5, 0, 0, 0, BIKE_TRANSP, arena_bg, 320);
+        if (i < b2->lives)
+            LCD_SpriteOverBg(x2, 2, 32, 32, b2->icon, 5, 0, 0, 0, BIKE_TRANSP, arena_bg, 320);
+    }
+}
+
+void Explode_Life_Icon(int x, int y, const uint16_t *icon) {
+    for (int frame = 1; frame <= 4; frame++) {
+        LCD_SpriteOverBg(x, y, 32, 32, icon, 5, frame, 0, 0, BIKE_TRANSP, arena_bg, 320);
+        HAL_Delay(150);
+    }
+}
+
+
+// Trail logic
 
 typedef struct { int8_t dx0, dy0, dx1, dy1; } TrailOffsets;
 
@@ -293,49 +316,58 @@ int check_head_on(Bike *b1, Bike *b2) {
     return 0;
 }
 
-/* 3. Handle the animation, lives, and map reset */
-void handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed) {
+/* 3. Handle the animation, lives, and map reset. Returns 1 if the game is over. */
+int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed) {
 
-	val = snprintf(msg, sizeof(msg), "%u", 6);
-	HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+    val = snprintf(msg, sizeof(msg), "%u", 6);
+    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
-    // Play explosion frames 4, 5, 6, 7
+    // Play on-field explosion (frames 4-7 of the bike sheet)
     for (int frame = 4; frame <= 7; frame++) {
-        if (p1_crashed) {
+        if (p1_crashed)
             LCD_SpriteOverBg(b1->x, b1->y, BIKE_W, BIKE_H, b1->sheet, 8, frame, 0, 0, b1->transp, arena_bg, 320);
-        }
-        if (p2_crashed) {
+        if (p2_crashed)
             LCD_SpriteOverBg(b2->x, b2->y, BIKE_W, BIKE_H, b2->sheet, 8, frame, 0, 0, b2->transp, arena_bg, 320);
-        }
-        HAL_Delay(150); // Pause on each frame so the explosion is visible
+        HAL_Delay(150);
     }
 
-    // Deduct lives
-    if (p1_crashed) b1->lives--;
-    if (p2_crashed) b2->lives--;
+    // Deduct lives, then play the dashboard explosion on the slot that just died.
+    // After decrement, b->lives is the new count; that value is also the 0-based
+    // index of the slot that was lost (e.g. 3→2 loses slot 2).
+    if (p1_crashed) {
+        b1->lives--;
+        Explode_Life_Icon(2 + b1->lives * 32, 2, b1->icon);
+    }
+    if (p2_crashed) {
+        b2->lives--;
+        Explode_Life_Icon(286 - b2->lives * 32, 2, b2->icon);
+    }
 
-    // If someone runs out of lives, reset back to 3 for a new game
-    if (b1->lives <= 0) b1->lives = 3;
-    if (b2->lives <= 0) b2->lives = 3;
+    // Game over if either player is out of lives
+    if (b1->lives <= 0 || b2->lives <= 0)
+        return 1;
 
+    // Still playing — reset arena, positions, and redraw
     memset(arena_map, 0, sizeof(arena_map));
 
-    // Reset Player 1 Position
     b1->x = BIKE_X_MIN; b1->y = BIKE_Y_MIN;
     b1->prev_x = BIKE_X_MIN; b1->prev_y = BIKE_Y_MIN;
     b1->dir = DIR_RIGHT;
 
-    // Reset Player 2 Position
     b2->x = BIKE_X_MAX; b2->y = BIKE_Y_MAX;
     b2->prev_x = BIKE_X_MAX; b2->prev_y = BIKE_Y_MAX;
     b2->dir = DIR_LEFT;
 
     LCD_Bitmap(0, 0, 320, 240, arena_bg);
+    Draw_Dashboard(b1, b2);
 
     LCD_SpriteOverBg(b1->x, b1->y, BIKE_W, BIKE_H, b1->sheet, 8, (int)b1->dir, 0, 0, b1->transp, arena_bg, 320);
     LCD_SpriteOverBg(b2->x, b2->y, BIKE_W, BIKE_H, b2->sheet, 8, (int)b2->dir, 0, 0, b2->transp, arena_bg, 320);
 
-    HAL_Delay(500);
+    HAL_Delay(2000);
+    val = snprintf(msg, sizeof(msg), "%u", 4);
+    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+    return 0;
 }
 
 static inline void input_to_bike(uint8_t jx, uint8_t jy,
@@ -427,6 +459,8 @@ int main(void)
 
 	  LCD_FadeInTransparent(163, 38, 63, 108, cinematic, BIKE_TRANSP, 4);
 	  HAL_Delay(1000);
+  while (1) { // outer restart loop — returns here after each game ends
+
 	  Draw_BG_From_SD("menu.bin");
 	  HAL_Delay(2000);
 
@@ -488,6 +522,9 @@ int main(void)
 	  const uint16_t *p1_selected_sheet = bike_blue;
 	  const uint16_t *p2_selected_sheet = bike_orange;
 
+	  const uint16_t *p1_icon = icon_blue;
+	  const uint16_t *p2_icon = icon_orange;
+
 		if (selected_mode == 0) {
 			Draw_BG_From_SD("charsel.bin");
 
@@ -503,6 +540,11 @@ int main(void)
 
 			int p1_draw_x = 16, p1_draw_y = 88;
 			int p2_draw_x = 176, p2_draw_y = 88;
+
+			const uint16_t* p1_icon_choices[3] = {icon_blue, icon_sam, icon_flyn};
+			const uint16_t* p2_icon_choices[3] = {icon_orange, icon_clu, icon_ares};
+			p1_icon = p1_icon_choices[p1_char];
+			p2_icon = p2_icon_choices[p2_char];
 
 			LCD_Print("  PROGRAM 1  ", 30, 60, 1, 0x07FF, 0x0000);
 			LCD_Print("  PROGRAM 2  ", 190, 60, 1, 0xFD20, 0x0000);
@@ -544,13 +586,13 @@ int main(void)
 				}
 				prev_j2_x = snap.j2_x;
 
-				if (snap.j2_no != 0 && prev_j2_no == 0) {
+				if (snap.j1_yes != 0 && prev_j2_no == 0) {
 					p2_ready = !p2_ready; // Lock/Unlock choice
 					update_p2 = 1;
 				}
 
 				prev_j1_no = snap.j1_no;
-				prev_j2_no = snap.j2_no;
+				prev_j2_no = snap.j1_yes;
 
 				// --- Render Updates ---
 				if (update_p1) {
@@ -605,6 +647,7 @@ int main(void)
 		  .sheet       = p1_selected_sheet,
 		  .transp      = BIKE_TRANSP,
 		  .lives	   = 3,
+		  .icon = p1_icon,
 	  };
 
 	  Bike bike2 = {
@@ -617,6 +660,7 @@ int main(void)
 		  .sheet       = p2_selected_sheet,
 		  .transp      = BIKE_TRANSP,
 		  .lives	   = 3,
+		  .icon = p2_icon,
 	  };
 
 	  p1_trace_color = bike.sheet[1928];
@@ -633,12 +677,18 @@ int main(void)
 					   bike2.sheet, 8, (int)bike2.dir, 0, 0,
 					   bike2.transp, arena_bg, 320);
 
+	  Draw_Dashboard(&bike, &bike2);
+
 	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+	  val = snprintf(msg, sizeof(msg), "%u", 3);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+	  HAL_Delay(2000);
 
 	while (1) {
 
@@ -711,7 +761,20 @@ int main(void)
 		}
 
 		if (p1_crashed || p2_crashed) {
-			handle_crash(&bike, &bike2, p1_crashed, p2_crashed);
+			if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed)) {
+			    int winner = (bike.lives > 0) ? 1 : 2;
+			    char win_msg[22];
+			    snprintf(win_msg, sizeof(win_msg), "PROGRAM %d QUALIFIED", winner);
+			    FillRect(30, 95, 260, 50, 0x0000);
+			    LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+			    val = snprintf(msg, sizeof(msg), "%u", 0);
+			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+			    val = snprintf(msg, sizeof(msg), "%u", 7);
+			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+			    while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
+			        HAL_Delay(50);
+			    break;
+			}
 			continue;
 		}
 
@@ -745,22 +808,10 @@ int main(void)
 			p_j2 = snap.j2_no;
 		}
 
-		/*if ((prev_val == snap.j1_no)) {
-		 //prev_val = snap.j1_no;
-		 }else if (snap.j1_no){
-		 val = snprintf(msg, sizeof(msg), "%u", 5);
-		 prev_val = snap.j1_no;
-		 HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-		 HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-		 }else{
-		 val = snprintf(msg, sizeof(msg), "%u", 4);
-		 prev_val = snap.j1_no;
-		 HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-		 HAL_UART_Transmit(&huart2, (uint8_t *)msg, val, HAL_MAX_DELAY);
-		 }*/
-
 		HAL_Delay(15);
-	}
+	}  // end inner game loop
+
+  } // end outer restart loop
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
