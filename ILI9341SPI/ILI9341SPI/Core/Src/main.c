@@ -49,6 +49,7 @@ typedef struct {
     uint16_t 		trail_color;
     int				lives;
     const uint16_t *icon;
+    uint8_t         char_index;
 } Bike;
 
 typedef struct {
@@ -525,11 +526,12 @@ int main(void)
 	  const uint16_t *p1_icon = icon_blue;
 	  const uint16_t *p2_icon = icon_orange;
 
+	  uint8_t p1_char = 0; // 0=Blue, 1=Sam, 2=Kevin
+	  uint8_t p2_char = 0; // 0=Orange, 1=Clu, 2=Ares
+
 		if (selected_mode == 0) {
 			Draw_BG_From_SD("charsel.bin");
 
-			uint8_t p1_char = 0; // 0=Blue, 1=Sam, 2=Kevin
-			uint8_t p2_char = 0; // 0=Orange, 1=Clu, 2=Ares
 			uint8_t p1_ready = 0;
 			uint8_t p2_ready = 0;
 
@@ -540,11 +542,6 @@ int main(void)
 
 			int p1_draw_x = 16, p1_draw_y = 88;
 			int p2_draw_x = 176, p2_draw_y = 88;
-
-			const uint16_t* p1_icon_choices[3] = {icon_blue, icon_sam, icon_flyn};
-			const uint16_t* p2_icon_choices[3] = {icon_orange, icon_clu, icon_ares};
-			p1_icon = p1_icon_choices[p1_char];
-			p2_icon = p2_icon_choices[p2_char];
 
 			LCD_Print("  PROGRAM 1  ", 30, 60, 1, 0x07FF, 0x0000);
 			LCD_Print("  PROGRAM 2  ", 190, 60, 1, 0xFD20, 0x0000);
@@ -617,6 +614,11 @@ int main(void)
 			const uint16_t* p1_choices[3] = {bike_blue, bike_samflyn, bike_kevinflyn};
 			const uint16_t* p2_choices[3] = {bike_orange, bike_clu, bike_ares};
 
+			const uint16_t* p1_icon_choices[3] = {icon_blue, icon_sam, icon_flyn};
+			const uint16_t* p2_icon_choices[3] = {icon_orange, icon_clu, icon_ares};
+			p1_icon = p1_icon_choices[p1_char];
+			p2_icon = p2_icon_choices[p2_char];
+
 			p1_selected_sheet = p1_choices[p1_char];
 			p2_selected_sheet = p2_choices[p2_char];
 
@@ -648,6 +650,7 @@ int main(void)
 		  .transp      = BIKE_TRANSP,
 		  .lives	   = 3,
 		  .icon = p1_icon,
+		  .char_index = p1_char,
 	  };
 
 	  Bike bike2 = {
@@ -661,6 +664,7 @@ int main(void)
 		  .transp      = BIKE_TRANSP,
 		  .lives	   = 3,
 		  .icon = p2_icon,
+		  .char_index = p2_char + 3,
 	  };
 
 	  p1_trace_color = bike.sheet[1928];
@@ -762,11 +766,31 @@ int main(void)
 
 		if (p1_crashed || p2_crashed) {
 			if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed)) {
-			    int winner = (bike.lives > 0) ? 1 : 2;
-			    char win_msg[22];
-			    snprintf(win_msg, sizeof(win_msg), "PROGRAM %d QUALIFIED", winner);
-			    FillRect(30, 95, 260, 50, 0x0000);
-			    LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+				int winner = 0; // 0 = Tie, 1 = Player 1, 2 = Player 2
+
+				if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
+				else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
+
+			    char win_msg[24];
+
+			    if (winner == 1){
+			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+			    	FillRect(30, 95, 260, 50, 0x0000);
+			    	LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+			    	char_wins[bike.char_index]++;
+			    }else if (winner == 2){
+			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+			    	FillRect(30, 95, 260, 50, 0x0000);
+			    	LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
+			    	char_wins[bike2.char_index]++;
+			    }else if (winner == 0){
+			    	snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
+					FillRect(30, 95, 260, 50, 0x0000);
+					LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
+			    }
+
+				Save_Scores();
+
 			    val = snprintf(msg, sizeof(msg), "%u", 0);
 			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 			    val = snprintf(msg, sizeof(msg), "%u", 7);
