@@ -7,6 +7,7 @@
 ../Core/Src/main.c:323:5:check_head_on	5
 ../Core/Src/main.c:333:5:handle_crash	9
 ../Core/Src/main.c:393:20:input_to_bike	17
+<<<<<<< Updated upstream
 ../Core/Src/main.c:428:5:main	86
 ../Core/Src/main.c:909:6:SystemClock_Config	3
 ../Core/Src/main.c:957:13:MX_SPI1_Init	2
@@ -17,3 +18,15 @@
 ../Core/Src/main.c:1132:13:MX_GPIO_Init	1
 ../Core/Src/main.c:1191:6:HAL_UART_RxCpltCallback	4
 ../Core/Src/main.c:1221:6:Error_Handler	1
+=======
+../Core/Src/main.c:428:5:main	89
+../Core/Src/main.c:888:6:SystemClock_Config	3
+../Core/Src/main.c:936:13:MX_SPI1_Init	2
+../Core/Src/main.c:974:13:MX_SPI2_Init	2
+../Core/Src/main.c:1012:13:MX_USART1_UART_Init	2
+../Core/Src/main.c:1045:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:1078:13:MX_USART3_UART_Init	2
+../Core/Src/main.c:1111:13:MX_GPIO_Init	1
+../Core/Src/main.c:1168:6:HAL_UART_RxCpltCallback	4
+../Core/Src/main.c:1196:6:Error_Handler	1
+>>>>>>> Stashed changes

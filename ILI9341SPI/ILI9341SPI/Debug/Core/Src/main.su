@@ -8,6 +8,7 @@
 ../Core/Src/main.c:333:5:handle_crash	72	static
 ../Core/Src/main.c:393:20:input_to_bike	48	static
 ../Core/Src/main.c:428:5:main	392	static
+<<<<<<< Updated upstream
 ../Core/Src/main.c:909:6:SystemClock_Config	88	static
 ../Core/Src/main.c:957:13:MX_SPI1_Init	8	static
 ../Core/Src/main.c:995:13:MX_SPI2_Init	8	static
@@ -17,3 +18,14 @@
 ../Core/Src/main.c:1132:13:MX_GPIO_Init	48	static
 ../Core/Src/main.c:1191:6:HAL_UART_RxCpltCallback	16	static
 ../Core/Src/main.c:1221:6:Error_Handler	4	static,ignoring_inline_asm
+=======
+../Core/Src/main.c:888:6:SystemClock_Config	88	static
+../Core/Src/main.c:936:13:MX_SPI1_Init	8	static
+../Core/Src/main.c:974:13:MX_SPI2_Init	8	static
+../Core/Src/main.c:1012:13:MX_USART1_UART_Init	8	static
+../Core/Src/main.c:1045:13:MX_USART2_UART_Init	8	static
+../Core/Src/main.c:1078:13:MX_USART3_UART_Init	8	static
+../Core/Src/main.c:1111:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:1168:6:HAL_UART_RxCpltCallback	16	static
+../Core/Src/main.c:1196:6:Error_Handler	4	static,ignoring_inline_asm
+>>>>>>> Stashed changes

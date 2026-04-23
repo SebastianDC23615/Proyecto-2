@@ -740,10 +740,17 @@ int main(void)
 			// Leer inputs actuales de ambos jugadores
 			struct_mensaje snap = datosJugadores;
 
+<<<<<<< Updated upstream
 			input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
 					&bike.speed);
 			input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
 					&bike2.speed);
+=======
+		input_to_bike(-(snap.j1_x), snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
+				&bike.speed);
+		input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
+				&bike2.speed);
+>>>>>>> Stashed changes
 
 			// Guardar posiciones anteriores para restauracion del fondo
 			bike.prev_x = bike.x;
@@ -762,12 +769,132 @@ int main(void)
 
 				if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
 
+<<<<<<< Updated upstream
 				switch (bike.dir) {
 					case DIR_RIGHT: bike.x += 2; break;
 					case DIR_LEFT:  bike.x -= 2; break;
 					case DIR_DOWN:  bike.y += 2; break;
 					case DIR_UP:    bike.y -= 2; break;
 				}
+=======
+		    switch (bike.dir) {
+		        case DIR_RIGHT: bike.x += 2; break;
+		        case DIR_LEFT:  bike.x -= 2; break;
+		        case DIR_DOWN:  bike.y += 2; break;
+		        case DIR_UP:    bike.y -= 2; break;
+		    }
+		}
+
+		// PLAYER 2
+		int steps2 = bike2.speed / 2;
+		for (int s = 0; s < steps2; s++) {
+		    int screen_cx2 = bike2.x + 7;
+		    int screen_cy2 = bike2.y + 7;
+
+		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
+		    int my2 = (screen_cy2 - ARENA_Y0) / 2;
+
+		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 3;
+
+		    switch (bike2.dir) {
+		        case DIR_RIGHT: bike2.x += 2; break;
+		        case DIR_LEFT:  bike2.x -= 2; break;
+		        case DIR_DOWN:  bike2.y += 2; break;
+		        case DIR_UP:    bike2.y -= 2; break;
+		    }
+		}
+
+		// --- COLLISION DETECTION ---
+		int p1_crashed = 0;
+		int p2_crashed = 0;
+
+		// 1. Colisión contra límites (Bordes de Pantalla)
+		if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
+		if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
+
+		// 2. Colisión contra mapa
+		int hit1 = check_trace_collision(&bike);
+		int hit2 = check_trace_collision(&bike2);
+
+		// Choque normal: Paredes (1), Trazo P1 (1), o Trazo P2 (3)
+		if (hit1 == 1 || hit1 == 3) p1_crashed = 1;
+		if (hit2 == 1 || hit2 == 3) p2_crashed = 1;
+
+		// Trampas de Cache Leak (2): Dañan al oponente
+		if (hit1 == 2) p2_crashed = 1;
+		if (hit2 == 2) p1_crashed = 1;
+
+		// 3. Colisiones Frontales (Sólo en Duelo)
+		if (selected_mode == 0){
+			if (check_head_on(&bike, &bike2)) {
+				p1_crashed = 1;
+				p2_crashed = 1;
+			}
+		}
+
+		if (p1_crashed || p2_crashed) {
+			if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed, selected_mode)) {
+				int winner = 0; // 0 = Tie, 1 = Player 1, 2 = Player 2
+
+				if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
+				else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
+
+			    char win_msg[24];
+
+			    if (winner == 1){
+			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+			    	FillRect(30, 95, 260, 50, 0x0000);
+			    	LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+			    	char_wins[bike.char_index]++;
+			    }else if (winner == 2){
+			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+			    	FillRect(30, 95, 260, 50, 0x0000);
+			    	LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
+			    	char_wins[bike2.char_index]++;
+			    }else if (winner == 0){
+			    	snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
+					FillRect(30, 95, 260, 50, 0x0000);
+					LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
+			    }
+
+			    if (winner != 0) Save_Scores();
+
+			    val = snprintf(msg, sizeof(msg), "%u", 0);
+			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+			    val = snprintf(msg, sizeof(msg), "%u", 7);
+			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+			    while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
+			        HAL_Delay(50);
+			    break;
+			}
+			continue;
+		}
+
+		// Restaurar fondo y volver a mostrar motos
+		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
+
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
+				(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
+
+		LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
+
+		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
+				(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
+
+
+		if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+
+			if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
+				val = snprintf(msg, sizeof(msg), "%u", 4);
+				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+			} else if ((p_j1 != 1) || (p_j2 != 1)) {
+				val = snprintf(msg, sizeof(msg), "%u", 5);
+				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+>>>>>>> Stashed changes
 			}
 
 			// Avanzar moto Jugador 2 y marcar trazo en el mapa
