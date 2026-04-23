@@ -18,20 +18,20 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "fatfs.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ili9341.h"
 #include "bitmaps.h"
+#include "fatfs_sd.h"
 #include <string.h>
 #include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-/* Direction values are also the sprite-sheet column index for that facing,
- * so casting (int)BikeDir straight into LCD_SpriteOverBg(..., index, ...)
- * picks the correct frame. Frame layout: 0=UP 1=LEFT 2=DOWN 3=RIGHT. */
+
 typedef enum {
     DIR_UP    = 0,
     DIR_LEFT  = 1,
@@ -40,18 +40,16 @@ typedef enum {
 } BikeDir;
 
 typedef struct {
-    int             x, y;          /* current top-left position */
-    int             prev_x, prev_y;/* previous frame, used for delta-restore */
-    BikeDir         dir;           /* facing == direction of motion */
-    int             speed;         /* pixels per frame */
-    const uint16_t *sheet;         /* 8-column sprite sheet for this character */
-    uint16_t        transp;        /* transparent color key for this sheet */
-    uint16_t 		trail_color;   /* RGB565 color written as permanent wall pixel */
+    int             x, y;
+    int             prev_x, prev_y;
+    BikeDir         dir;
+    int             speed;
+    const uint16_t *sheet;
+    uint16_t        transp;
+    uint16_t 		trail_color;
+    int				lives;
 } Bike;
 
-/* Hitbox rectangle expressed as an offset from the sprite top-left
- * plus its own width and height. One instance per direction (see
- * hitbox_for_dir[] in USER CODE 0). */
 typedef struct {
     int off_x, off_y;
     int w, h;
@@ -72,11 +70,15 @@ typedef struct {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Playfield: inclusive pixel bounds the bike's body must stay inside. */
+
+
+
+
+
 #define ARENA_X0      2
-#define ARENA_Y0      40
-#define ARENA_X1      316
-#define ARENA_Y1      236
+#define ARENA_Y0      36
+#define ARENA_X1      317
+#define ARENA_Y1      237
 
 #define ARENA_W_TILES 160
 #define ARENA_H_TILES 120
@@ -100,8 +102,8 @@ typedef struct {
  * leading edge along the direction of travel. */
 #define BIKE_X_MIN    ARENA_X0
 #define BIKE_Y_MIN    ARENA_Y0
-#define BIKE_X_MAX    (ARENA_X1 - BIKE_W)   /* 316 - 32 + 1 = 285 */
-#define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H)   /* 236 - 32 + 1 = 205 */
+#define BIKE_X_MAX    (ARENA_X1 - BIKE_W)
+#define BIKE_Y_MAX    (ARENA_Y1 - BIKE_H)
 
 
 #define JOY_CENTER       127
@@ -119,6 +121,7 @@ typedef struct {
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
+SPI_HandleTypeDef hspi2;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -126,16 +129,33 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern const uint16_t arena_bg[];
+extern const uint16_t cinematic[];
+extern const uint16_t main_menu[];
+
+// NEW: Character Selection Assets
+//extern const uint16_t car_sel_bg[];
+extern const uint16_t car_sel[];
+
+// NEW: Bike sprite sheets
+extern const uint16_t bike_blue[];
+extern const uint16_t bike_samflyn[];
+extern const uint16_t bike_kevinflyn[];
+extern const uint16_t bike_orange[];
+extern const uint16_t bike_clu[];
+extern const uint16_t bike_ares[];
+
 uint8_t arena_map[ARENA_H_TILES][ARENA_W_TILES];
 
 uint16_t p1_trace_color;
 uint16_t p2_trace_color;
 
 /* UART receive state machine buffers, consumed by HAL_UART_RxCpltCallback. */
-uint8_t           rx_byte;            /* 1-byte slot for sync hunt     */
-uint8_t           rx_payload[8];      /* 8-byte slot for payload read  */
-volatile uint8_t  sincronizado = 0;   /* 0 = waiting for 0xAA, 1 = reading payload */
-volatile struct_mensaje datosJugadores;  /* latest decoded snapshot    */
+uint8_t rx_byte;
+uint8_t rx_payload[8];
+volatile uint8_t  sincronizado = 0;
+volatile struct_mensaje datosJugadores;
+uint8_t val = 0;
+char msg[3];
 
 volatile uint8_t dbg_pending = 0;
 uint8_t dbg_copy[8];
@@ -148,6 +168,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_SPI2_Init(void);
 /* USER CODE BEGIN PFP */
 void DrawTraceAndMarkMap(int cx, int cy, uint16_t color, uint8_t player_id);
 
@@ -156,18 +177,73 @@ void DrawTraceAndMarkMap(int cx, int cy, uint16_t color, uint8_t player_id);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* Trail pixel offsets (local 0-indexed coords within the sprite frame)
- * for the two pixels baked into each direction's sprite at the trailing edge.
- * Used by LCD_RestoreBgDelta to leave those pixels on-screen as permanent wall. */
+// SD Card functions
+FATFS fs;
+FRESULT fres;
+
+// BG Loading, directly to screen
+
+void Draw_BG_From_SD(const char* filename) {
+    FIL file;
+    UINT bytes_read;
+    uint8_t line_buffer[640];
+
+    if (f_open(&file, filename, FA_READ) == FR_OK) {
+        // SetWindows sends commands via LCD_CMD, which manages CS itself.
+        // It ends with CS_H and DC_L after the 0x2C (RAMWR) command.
+        SetWindows(0, 0, 319, 239);
+
+        // Now manually enter data mode for the bulk pixel transfer.
+        LCD_DC_H();
+        LCD_CS_L();
+
+        for (int y = 0; y < 240; y++) {
+            f_read(&file, line_buffer, 640, &bytes_read);
+            HAL_SPI_Transmit(&hspi1, line_buffer, 640, HAL_MAX_DELAY);
+        }
+
+        LCD_CS_H();
+        f_close(&file);
+    } else {
+        LCD_Clear(0xF800);
+    }
+}
+
+//Caracter scores
+
+uint16_t char_wins[6] = {0, 0, 0, 0, 0, 0}; // 0=Blue, 1=Sam, 2=Kevin, 3=Orange, 4=Clu, 5=Ares
+
+void Save_Scores() {
+    FIL file;
+    UINT bytes_written;
+
+    // Open the file (FA_CREATE_ALWAYS ensures it creates a new file or overwrites the old one)
+    if (f_open(&file, "scores.bin", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
+        // Write the exact 12 bytes (6 uint16_t) of data to the SD Card
+        f_write(&file, char_wins, sizeof(char_wins), &bytes_written);
+        f_close(&file);
+    }
+}
+
+void Load_Scores() {
+    FIL file;
+    UINT bytes_read;
+
+    // Try to open the file to read it
+    if (f_open(&file, "scores.bin", FA_READ) == FR_OK) {
+        f_read(&file, char_wins, sizeof(char_wins), &bytes_read);
+        f_close(&file);
+    } else {
+        // FILE DOES NOT EXIST!
+        // This is a fresh SD card. Call Save_Scores() to create 'scores.bin'
+        // right now using the default zeros in our char_wins array.
+        Save_Scores();
+    }
+}
+
+
 typedef struct { int8_t dx0, dy0, dx1, dy1; } TrailOffsets;
 
-/* 1 byte per arena pixel — 0=empty, 1=trail present.
- * Indexed [y - ARENA_Y0][x - ARENA_X0]. Must be global (not stack). */
-
-/* Hitbox geometry per facing. Indexed by BikeDir (UP=0, LEFT=1, DOWN=2,
- * RIGHT=3) so a lookup is just hitbox_for_dir[bike.dir]. Kept read-only
- * in flash. When you add a new sprite that needs a different hitbox,
- * change these constants — not the per-frame code. */
 static const HitboxRect hitbox_for_dir[4] = {
     /* DIR_UP    */ { HITBOX_INSET, 0,            HITBOX_SHORT, HITBOX_LONG  },
     /* DIR_LEFT  */ { 0,            HITBOX_INSET, HITBOX_LONG,  HITBOX_SHORT },
@@ -187,10 +263,81 @@ static inline void bike_get_hitbox(const Bike *b,
     *hh = r->h;
 }
 
-/* Map one joystick's X/Y + buttons to a desired direction and speed.
- * Returns the bike's CURRENT dir unchanged if the stick is in the
- * deadzone, if both axes are out but equal, or if the requested move
- * is a 180° reverse (not allowed in Tron). */
+/* 1. Check if the head of the bike hit a trace */
+int check_trace_collision(Bike *b) {
+    int head_x = b->x + 7; // Center X
+    int head_y = b->y + 7; // Center Y
+
+    // Push the check coordinate to the absolute front edge of the bike based on direction
+    if (b->dir == DIR_UP) head_y = b->y;
+    else if (b->dir == DIR_DOWN) head_y = b->y + 15;
+    else if (b->dir == DIR_LEFT) head_x = b->x;
+    else if (b->dir == DIR_RIGHT) head_x = b->x + 15;
+
+    int mx = (head_x - ARENA_X0) / 2;
+    int my = (head_y - ARENA_Y0) / 2;
+
+    // If it's inside the array and the array is not 0, it's a crash!
+    if (mx >= 0 && mx < ARENA_W_TILES && my >= 0 && my < ARENA_H_TILES) {
+        if (arena_map[my][mx] != 0) return 1;
+    }
+    return 0;
+}
+
+/* 2. Check if the bikes hit each other head-on */
+int check_head_on(Bike *b1, Bike *b2) {
+    int dx = b1->x - b2->x;
+    int dy = b1->y - b2->y;
+    // If the centers of both bikes are within 10 pixels of each other, they crashed
+    if (dx > -10 && dx < 10 && dy > -10 && dy < 10) return 1;
+    return 0;
+}
+
+/* 3. Handle the animation, lives, and map reset */
+void handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed) {
+
+	val = snprintf(msg, sizeof(msg), "%u", 6);
+	HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+
+    // Play explosion frames 4, 5, 6, 7
+    for (int frame = 4; frame <= 7; frame++) {
+        if (p1_crashed) {
+            LCD_SpriteOverBg(b1->x, b1->y, BIKE_W, BIKE_H, b1->sheet, 8, frame, 0, 0, b1->transp, arena_bg, 320);
+        }
+        if (p2_crashed) {
+            LCD_SpriteOverBg(b2->x, b2->y, BIKE_W, BIKE_H, b2->sheet, 8, frame, 0, 0, b2->transp, arena_bg, 320);
+        }
+        HAL_Delay(150); // Pause on each frame so the explosion is visible
+    }
+
+    // Deduct lives
+    if (p1_crashed) b1->lives--;
+    if (p2_crashed) b2->lives--;
+
+    // If someone runs out of lives, reset back to 3 for a new game
+    if (b1->lives <= 0) b1->lives = 3;
+    if (b2->lives <= 0) b2->lives = 3;
+
+    memset(arena_map, 0, sizeof(arena_map));
+
+    // Reset Player 1 Position
+    b1->x = BIKE_X_MIN; b1->y = BIKE_Y_MIN;
+    b1->prev_x = BIKE_X_MIN; b1->prev_y = BIKE_Y_MIN;
+    b1->dir = DIR_RIGHT;
+
+    // Reset Player 2 Position
+    b2->x = BIKE_X_MAX; b2->y = BIKE_Y_MAX;
+    b2->prev_x = BIKE_X_MAX; b2->prev_y = BIKE_Y_MAX;
+    b2->dir = DIR_LEFT;
+
+    LCD_Bitmap(0, 0, 320, 240, arena_bg);
+
+    LCD_SpriteOverBg(b1->x, b1->y, BIKE_W, BIKE_H, b1->sheet, 8, (int)b1->dir, 0, 0, b1->transp, arena_bg, 320);
+    LCD_SpriteOverBg(b2->x, b2->y, BIKE_W, BIKE_H, b2->sheet, 8, (int)b2->dir, 0, 0, b2->transp, arena_bg, 320);
+
+    HAL_Delay(500);
+}
+
 static inline void input_to_bike(uint8_t jx, uint8_t jy,
                                  uint8_t btn_slow, uint8_t btn_fast,
                                  BikeDir *io_dir, int *out_speed) {
@@ -199,14 +346,13 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
     int ax = dx < 0 ? -dx : dx;
     int ay = dy < 0 ? -dy : dy;
 
-    BikeDir requested = *io_dir;     /* default: keep current facing */
+    BikeDir requested = *io_dir;
     if (ax >= JOY_DEADZONE || ay >= JOY_DEADZONE) {
         if (ax > ay)      requested = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
         else if (ay > ax) requested = (dy > 0) ? DIR_UP  : DIR_DOWN;
-        /* ax == ay: ambiguous, keep current */
     }
 
-    /* Reject 180° reversal. UP<->DOWN and LEFT<->RIGHT share parity. */
+    // Reject 180° reversal
     BikeDir cur = *io_dir;
     int is_reverse =
         (cur == DIR_UP    && requested == DIR_DOWN)  ||
@@ -215,7 +361,6 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
         (cur == DIR_RIGHT && requested == DIR_LEFT);
     if (!is_reverse) *io_dir = requested;
 
-    /* Speed: slow takes priority if both buttons are pressed. */
     if (btn_fast) *out_speed = BIKE_SPEED_FAST;
     else *out_speed = BIKE_SPEED_NORMAL;
 }
@@ -256,10 +401,189 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
+  MX_SPI2_Init();
+  MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
+
+  	  val = snprintf(msg, sizeof(msg), "%u", 0);
+  	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
 	  LCD_Init();
 	  LCD_Clear(0x0000);
+
+	  f_mount(&fs, "", 1);
+	  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+	  HAL_SPI_Init(&hspi2);
+	  Load_Scores();
+
+	  // Start Animation
+
+	  HAL_Delay(2000);
+	  LCD_FadeInPartial(189, 79, 5, 3, cinematic, 26, 41, 63, 2);
+	  HAL_Delay(2000);
+
+	  val = snprintf(msg, sizeof(msg), "%u", 1);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+
+	  LCD_FadeInTransparent(163, 38, 63, 108, cinematic, BIKE_TRANSP, 4);
+	  HAL_Delay(1000);
+	  Draw_BG_From_SD("menu.bin");
+	  HAL_Delay(2000);
+
+	  val = snprintf(msg, sizeof(msg), "%u", 2);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+
+	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+
+	  // Main Menu (Gamemode select)
+		uint8_t Play = 0;
+		int selected_mode = 0;
+		uint8_t prev_j1_y = 127;
+		uint8_t prev_j1_no = 0;
+
+		int txt1_x = 20, txt1_y = 170;
+		int txt2_x = 20, txt2_y = 200;
+
+	  while (Play == 0) {
+			struct_mensaje snap = datosJugadores;
+
+			if (snap.j1_y > 170 && prev_j1_y <= 170) {
+				selected_mode = 0;
+			} else if (snap.j1_y < 80 && prev_j1_y >= 80) {
+				selected_mode = 1;
+			}
+			prev_j1_y = snap.j1_y;
+
+			// 2. Render Menu Text (with background color 0x0000 / Black)
+			if (selected_mode == 0) {
+				LCD_Print("> LIGHTCYCLE DUEL", txt1_x, txt1_y, 1, 0x04FF, 0x0000);
+				LCD_Print("     CACHE LEAK  ", txt2_x, txt2_y, 1, 0xFFFF, 0x0000);
+			} else {
+				LCD_Print("  LIGHTCYCLE DUEL", txt1_x, txt1_y, 1, 0xFFFF, 0x0000);
+				LCD_Print(">    CACHE LEAK  ", txt2_x, txt2_y, 1, 0x04FF, 0x0000);
+			}
+
+			// 3. Handle Selection Confirm (j1_no pressed)
+			if (snap.j1_no != 0 && prev_j1_no == 0) {
+				if (selected_mode == 0) {
+					Play = 1;
+				} else if (selected_mode == 1) {
+					// Nuevo Modo
+				}
+			}
+			prev_j1_no = snap.j1_no;
+
+			HAL_Delay(50);
+
+
+
+	  }
+
+	  LCD_Clear(0x0000);
+	  HAL_Delay(500);
+
+
+	  // CHARACTER SELECTION MENU
+
+	  const uint16_t *p1_selected_sheet = bike_blue;
+	  const uint16_t *p2_selected_sheet = bike_orange;
+
+		if (selected_mode == 0) {
+			Draw_BG_From_SD("charsel.bin");
+
+			uint8_t p1_char = 0; // 0=Blue, 1=Sam, 2=Kevin
+			uint8_t p2_char = 0; // 0=Orange, 1=Clu, 2=Ares
+			uint8_t p1_ready = 0;
+			uint8_t p2_ready = 0;
+
+			uint8_t prev_j1_x = 127;
+			uint8_t prev_j2_x = 127;
+			uint8_t prev_j1_no = 0;
+			uint8_t prev_j2_no = 0;
+
+			int p1_draw_x = 16, p1_draw_y = 88;
+			int p2_draw_x = 176, p2_draw_y = 88;
+
+			LCD_Print("  PROGRAM 1  ", 30, 60, 1, 0x07FF, 0x0000);
+			LCD_Print("  PROGRAM 2  ", 190, 60, 1, 0xFD20, 0x0000);
+
+			uint8_t force_render = 1;
+
+			while (!p1_ready || !p2_ready) {
+				struct_mensaje snap = datosJugadores;
+				uint8_t update_p1 = force_render;
+				uint8_t update_p2 = force_render;
+				force_render = 0;
+
+				// --- Player 1 Navigation ---
+				if (!p1_ready) {
+					if (snap.j1_x < 80 && prev_j1_x >= 80) {
+						p1_char = (p1_char == 0) ? 2 : p1_char - 1;
+						update_p1 = 1;
+					} else if (snap.j1_x > 170 && prev_j1_x <= 170) {
+						p1_char = (p1_char == 2) ? 0 : p1_char + 1;
+						update_p1 = 1;
+					}
+				}
+				prev_j1_x = snap.j1_x;
+
+				if (snap.j1_no != 0 && prev_j1_no == 0) {
+					p1_ready = !p1_ready; // Lock/Unlock choice
+					update_p1 = 1;
+				}
+
+				// --- Player 2 Navigation ---
+				if (!p2_ready) {
+					if (snap.j2_x < 80 && prev_j2_x >= 80) {
+						p2_char = (p2_char == 0) ? 2 : p2_char - 1;
+						update_p2 = 1;
+					} else if (snap.j2_x > 170 && prev_j2_x <= 170) {
+						p2_char = (p2_char == 2) ? 0 : p2_char + 1;
+						update_p2 = 1;
+					}
+				}
+				prev_j2_x = snap.j2_x;
+
+				if (snap.j2_no != 0 && prev_j2_no == 0) {
+					p2_ready = !p2_ready; // Lock/Unlock choice
+					update_p2 = 1;
+				}
+
+				prev_j1_no = snap.j1_no;
+				prev_j2_no = snap.j2_no;
+
+				// --- Render Updates ---
+				if (update_p1) {
+					FillRect(p1_draw_x, p1_draw_y, 128, 64, 0x0000);
+					LCD_BitmapPartialTransparent(p1_draw_x, p1_draw_y, 128, 64, car_sel, p1_char * 128, 0, 768, BIKE_TRANSP);
+
+					if (p1_ready) LCD_Print("  READY  ", 40, 160, 1, 0x07E0, 0x0000);
+					else LCD_Print("         ", 40, 160, 1, 0x0000, 0x0000);
+				}
+
+				if (update_p2) {
+					FillRect(p2_draw_x, p2_draw_y, 128, 64, 0x0000);
+					LCD_BitmapPartialTransparent(p2_draw_x, p2_draw_y, 128, 64, car_sel, (p2_char + 3) * 128, 0, 768, BIKE_TRANSP);
+
+					if (p2_ready) LCD_Print("  READY  ", 200, 160, 1, 0x07E0, 0x0000);
+					else LCD_Print("         ", 200, 160, 1, 0x0000, 0x0000);
+				}
+
+				HAL_Delay(50);
+			}
+
+			const uint16_t* p1_choices[3] = {bike_blue, bike_samflyn, bike_kevinflyn};
+			const uint16_t* p2_choices[3] = {bike_orange, bike_clu, bike_ares};
+
+			p1_selected_sheet = p1_choices[p1_char];
+			p2_selected_sheet = p2_choices[p2_char];
+
+			HAL_Delay(1000);
+		}
+
+	  val = snprintf(msg, sizeof(msg), "%u", 0);
+	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+
 	  LCD_Bitmap(0, 0, 320, 240, arena_bg);
 
 	  struct_mensaje snap = datosJugadores;
@@ -268,15 +592,9 @@ int main(void)
 
 	  memset(arena_map, 0, sizeof(arena_map));
 
-	  char msg[3];
-	  uint8_t val = 0;
 	  val = snprintf(msg, sizeof(msg), "%u", 4);
 	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
-
-	  /* Single-bike square-loop test. No input, no collisions, no trail yet.
-	   * Designed so a future second bike is just another Bike struct, and a
-	   * future input layer only needs to overwrite bike.dir each frame. */
 	  Bike bike = {
 		  .x           = BIKE_X_MIN,
 		  .y           = BIKE_Y_MIN,
@@ -284,8 +602,9 @@ int main(void)
 		  .prev_y      = BIKE_Y_MIN,
 		  .dir         = DIR_RIGHT,
 		  .speed       = BIKE_SPEED_NORMAL,
-		  .sheet       = bike_kevinflyn,
+		  .sheet       = p1_selected_sheet,
 		  .transp      = BIKE_TRANSP,
+		  .lives	   = 3,
 	  };
 
 	  Bike bike2 = {
@@ -295,8 +614,9 @@ int main(void)
 		  .prev_y      = BIKE_Y_MAX,
 		  .dir         = DIR_LEFT,
 		  .speed       = BIKE_SPEED_NORMAL,
-		  .sheet       = bike_ares,
+		  .sheet       = p2_selected_sheet,
 		  .transp      = BIKE_TRANSP,
+		  .lives	   = 3,
 	  };
 
 	  p1_trace_color = bike.sheet[1928];
@@ -305,10 +625,6 @@ int main(void)
 	  bike2.trail_color = p2_trace_color;
 
 
-	  /* Paint the bike once at its spawn so frame 1's restore has something to
-	   * work against (otherwise the first delta-restore would be a no-op and
-	   * the very first sprite draw would still be correct, but this keeps the
-	   * visual symmetric with later frames). */
 	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
 					   bike.sheet, 8, (int)bike.dir, 0, 0,
 					   bike.transp, arena_bg, 320);
@@ -325,19 +641,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
 	while (1) {
-		/* 1. Pull latest joystick snapshot into locals. The volatile read
-		 *    is a single-frame latch — if a UART IRQ fires mid-frame, we
-		 *    use the OLD snapshot for this frame and pick up the new one
-		 *    next frame, which is fine at 50 ms UART cadence vs 15 ms frames. */
+
 		struct_mensaje snap = datosJugadores;
 
-		// mapear cada jugador a variables de struct con inputs de controles
 		input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
 				&bike.speed);
 		input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
 				&bike2.speed);
 
-		// Mover hacia nueva posicion segun velocidad y cambiar direccion de sprite
 		bike.prev_x = bike.x;
 		bike2.prev_x = bike2.x;
 		bike.prev_y = bike.y;
@@ -346,16 +657,13 @@ int main(void)
 		// PLAYER 1
 		int steps1 = bike.speed / 2;
 		for (int s = 0; s < steps1; s++) {
-		    int screen_cx = bike.x + 7;   // exact center pixel X
-		    int screen_cy = bike.y + 7;   // exact center pixel Y
+		    int screen_cx = bike.x + 7;
+		    int screen_cy = bike.y + 7;
 
-		    // Round to nearest cell instead of flooring
 		    int mx1 = (screen_cx - ARENA_X0) / 2;
 		    int my1 = (screen_cy - ARENA_Y0) / 2;
 
-		    // Clamp and write
-		    if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES)
-		        arena_map[my1][mx1] = 1;
+		    if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
 
 		    switch (bike.dir) {
 		        case DIR_RIGHT: bike.x += 2; break;
@@ -374,8 +682,7 @@ int main(void)
 		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
 		    int my2 = (screen_cy2 - ARENA_Y0) / 2;
 
-		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES)
-		        arena_map[my2][mx2] = 2;
+		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 2;
 
 		    switch (bike2.dir) {
 		        case DIR_RIGHT: bike2.x += 2; break;
@@ -385,24 +692,28 @@ int main(void)
 		    }
 		}
 
-		// hard limits de la arena jugable
-		if (bike.x < BIKE_X_MIN)
-			bike.x = BIKE_X_MIN;
-		if (bike.x > BIKE_X_MAX)
-			bike.x = BIKE_X_MAX;
-		if (bike.y < BIKE_Y_MIN)
-			bike.y = BIKE_Y_MIN;
-		if (bike.y > BIKE_Y_MAX)
-			bike.y = BIKE_Y_MAX;
+		// --- COLLISION DETECTION ---
+		int p1_crashed = 0;
+		int p2_crashed = 0;
 
-		if (bike2.x < BIKE_X_MIN)
-			bike2.x = BIKE_X_MIN;
-		if (bike2.x > BIKE_X_MAX)
-			bike2.x = BIKE_X_MAX;
-		if (bike2.y < BIKE_Y_MIN)
-			bike2.y = BIKE_Y_MIN;
-		if (bike2.y > BIKE_Y_MAX)
-			bike2.y = BIKE_Y_MAX;
+		// 1. Check if they hit the arena walls (Bounds Check)
+		if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
+		if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
+
+		// 2. Check if they hit a trace
+		if (check_trace_collision(&bike)) p1_crashed = 1;
+		if (check_trace_collision(&bike2)) p2_crashed = 1;
+
+		// 3. Check for head-on collisions
+		if (check_head_on(&bike, &bike2)) {
+			p1_crashed = 1;
+			p2_crashed = 1;
+		}
+
+		if (p1_crashed || p2_crashed) {
+			handle_crash(&bike, &bike2, p1_crashed, p2_crashed);
+			continue;
+		}
 
 		// Restaurar fondo y volver a mostrar motos
 		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
@@ -417,19 +728,17 @@ int main(void)
 		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
 				(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
 
-		char msg[3];
-		uint8_t val = 0;
 
 		if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
 
 			if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
 				val = snprintf(msg, sizeof(msg), "%u", 4);
 				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
-				HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
 			} else if ((p_j1 != 1) || (p_j2 != 1)) {
 				val = snprintf(msg, sizeof(msg), "%u", 5);
 				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
-				HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
 			}
 
 			p_j1 = snap.j1_no;
@@ -452,10 +761,10 @@ int main(void)
 
 		HAL_Delay(15);
 	}
-	/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
-	/* USER CODE END 3 */
+    /* USER CODE BEGIN 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -540,6 +849,44 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief SPI2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI2_Init(void)
+{
+
+  /* USER CODE BEGIN SPI2_Init 0 */
+
+  /* USER CODE END SPI2_Init 0 */
+
+  /* USER CODE BEGIN SPI2_Init 1 */
+
+  /* USER CODE END SPI2_Init 1 */
+  /* SPI2 parameter configuration*/
+  hspi2.Instance = SPI2;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi2.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI2_Init 2 */
+
+  /* USER CODE END SPI2_Init 2 */
 
 }
 
@@ -666,7 +1013,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LCD_CS_Pin|SD_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;

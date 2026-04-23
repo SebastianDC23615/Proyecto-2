@@ -21,16 +21,6 @@
  *  SCK 	- PA5
  * */
 
-#define LCD_DC_PORT    GPIOA
-#define LCD_DC_PIN     GPIO_PIN_4
-#define LCD_DC_L()     (LCD_DC_PORT->BSRR = (LCD_DC_PIN<<16))	//
-#define LCD_DC_H()     (LCD_DC_PORT->BSRR =  LCD_DC_PIN)		//Poner el modo RS en high es para mandar dato
-
-#define LCD_CS_PORT    GPIOB
-#define LCD_CS_PIN     GPIO_PIN_0
-#define LCD_CS_L()     (LCD_CS_PORT->BSRR = (LCD_CS_PIN<<16)) 	//Pone el chip select en activo para empezar la comunicación con la pantalla
-#define LCD_CS_H()     (LCD_CS_PORT->BSRR =  LCD_CS_PIN)		//
-
 extern const uint8_t smallFont[1140];
 extern const uint16_t bigFont[1520];
 extern SPI_HandleTypeDef hspi1;
@@ -390,6 +380,134 @@ void LCD_BitmapTransparent(uint16_t x, uint16_t y, uint16_t width,
 		}
 	}
 }
+
+//***************************************************************************************************************************************
+// Función para dibujar una porción específica de un Bitmap
+//***************************************************************************************************************************************
+void LCD_BitmapPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bitmap, int src_x, int src_y, int src_total_w) {
+    LCD_DC_H();
+    LCD_CS_L();
+
+    SetWindows(x, y, x + draw_w - 1, y + draw_h - 1);
+
+    for (int j = 0; j < draw_h; j++) {
+        for (int i = 0; i < draw_w; i++) {
+            // Calculate the exact index in the full 1D array based on the starting crop coordinates
+            int index = ((src_y + j) * src_total_w) + (src_x + i);
+            uint16_t pixel = bitmap[index];
+
+            LCD_DATA(pixel >> 8);
+            LCD_DATA(pixel & 0xFF);
+        }
+    }
+
+    LCD_CS_H();
+}
+
+//***************************************************************************************************************************************
+// Función para dibujar una porción específica de un Bitmap ignorando un color transparente
+//***************************************************************************************************************************************
+void LCD_BitmapPartialTransparent(int x, int y, int draw_w, int draw_h, const uint16_t *bitmap, int src_x, int src_y, int src_total_w, uint16_t transpColor) {
+    for (int j = 0; j < draw_h; j++) {
+        for (int i = 0; i < draw_w; i++) {
+            // Calculate the exact index in the full 1D array based on the starting crop coordinates
+            int index = ((src_y + j) * src_total_w) + (src_x + i);
+            uint16_t pixel = bitmap[index];
+
+            // Only draw the pixel if it is NOT the transparent color
+            if (pixel != transpColor) {
+                LCD_CS_L();
+                SetWindows(x + i, y + j, x + i, y + j);
+                LCD_CMD(0x02c);
+                LCD_DC_H();
+                LCD_DATA(pixel >> 8);
+                LCD_DATA(pixel & 0xFF);
+                LCD_CS_H();
+            }
+        }
+    }
+}
+
+//***************************************************************************************************************************************
+// Función interna para oscurecer un color RGB565 (level 0 = Negro, level 32 = Color Original)
+//***************************************************************************************************************************************
+static uint16_t _fade_color(uint16_t color, uint8_t level) {
+    if (level >= 32) return color;
+    if (level == 0) return 0x0000;
+
+    // Desempaquetar los bits de RGB565
+    uint16_t r = (color >> 11) & 0x1F;
+    uint16_t g = (color >> 5) & 0x3F;
+    uint16_t b = color & 0x1F;
+
+    // Multiplicar por el nivel de brillo y dividir por 32 (>> 5)
+    r = (r * level) >> 5;
+    g = (g * level) >> 5;
+    b = (b * level) >> 5;
+
+    // Volver a empaquetar
+    return (r << 11) | (g << 5) | b;
+}
+
+//***************************************************************************************************************************************
+// Fades in a specific portion of a Bitmap
+//***************************************************************************************************************************************
+void LCD_FadeInPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bitmap, int src_x, int src_y, int src_total_w, int speed) {
+    int level = 1;
+    while (level <= 32) {
+        LCD_DC_H();
+        LCD_CS_L();
+        SetWindows(x, y, x + draw_w - 1, y + draw_h - 1);
+
+        for (int j = 0; j < draw_h; j++) {
+            for (int i = 0; i < draw_w; i++) {
+                int index = ((src_y + j) * src_total_w) + (src_x + i);
+                uint16_t pixel = _fade_color(bitmap[index], level);
+
+                LCD_DATA(pixel >> 8);
+                LCD_DATA(pixel & 0xFF);
+            }
+        }
+        LCD_CS_H();
+
+        if (level == 32) break; // Finished
+        level += speed;
+        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+    }
+}
+
+//***************************************************************************************************************************************
+// Fades in a Bitmap while respecting a transparent color
+//***************************************************************************************************************************************
+void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t *bitmap, uint16_t transpColor, int speed) {
+    int level = 1;
+    while (level <= 32) {
+        for (int j = 0; j < draw_h; j++) {
+            for (int i = 0; i < draw_w; i++) {
+                int index = j * draw_w + i;
+                uint16_t pixel = bitmap[index];
+
+                if (pixel != transpColor) {
+                    pixel = _fade_color(pixel, level);
+
+                    LCD_CS_L();
+                    SetWindows(x + i, y + j, x + i, y + j);
+                    LCD_CMD(0x02c);
+                    LCD_DC_H();
+                    LCD_DATA(pixel >> 8);
+                    LCD_DATA(pixel & 0xFF);
+                    LCD_CS_H();
+                }
+            }
+        }
+
+        if (level == 32) break; // Finished
+        level += speed;
+        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+    }
+}
+
+
 //***************************************************************************************************************************************
 // Función para dibujar una imagen sprite - los parámetros columns = número de imagenes en el sprite, index = cual desplegar, flip = darle vuelta
 //***************************************************************************************************************************************
@@ -468,7 +586,7 @@ static void _restore_bg_rect(int x, int y, int w, int h,
 
             // Map the screen coordinates to the 160x120 array (ARENA_X0=3, ARENA_Y0=41)
             int map_x = (px_x - 3) / 2;
-            int map_y = (px_y - 41) / 2;
+            int map_y = (px_y - 37) / 2;
 
             // Check if there is a trace here, otherwise draw the normal background
             if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
@@ -500,7 +618,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
             int px_x = x + i;
             int px_y = y + j;
             int map_x = (px_x - 3) / 2;
-            int map_y = (px_y - 41) / 2;
+            int map_y = (px_y - 37) / 2;
             uint16_t px;
 
             // Read from the map so the trace composites UNDER the transparent parts of the bike
