@@ -401,7 +401,7 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
     BikeDir requested = *io_dir;
     if (ax >= JOY_DEADZONE || ay >= JOY_DEADZONE) {
         if (ax > ay)      requested = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
-        else if (ay > ax) requested = (dy > 0) ? DIR_UP  : DIR_DOWN;
+        else if (ay > ax) requested = (dy > 0) ? DIR_DOWN  : DIR_UP;
     }
 
     // Evitar giros de 180 grados
@@ -509,9 +509,9 @@ int main(void)
 		while (Play == 0) {
 			struct_mensaje snap = datosJugadores;
 
-			if (snap.j1_y > 170 && prev_j1_y <= 170) {
+			if (snap.j1_y < 80 && prev_j1_y >= 80) {
 				selected_mode = 0;
-			} else if (snap.j1_y < 80 && prev_j1_y >= 80) {
+			} else if (snap.j1_y > 170 && prev_j1_y <= 170) {
 				selected_mode = 1;
 			}
 			prev_j1_y = snap.j1_y;
@@ -609,14 +609,14 @@ int main(void)
 				prev_j2_x = snap.j2_x;
 
 				if (snap.j2_no != 0 && prev_j2_no == 0) {
-					p2_ready = !p2_ready; // Lock/Unlock choice
+					p2_ready = !p2_ready; // Seleccionar o deseleccionar
 					update_p2 = 1;
 				}
 
 				prev_j1_no = snap.j1_no;
 				prev_j2_no = snap.j2_no;
 
-				// --- Render Updates ---
+				// Actualizar sprites en pantalla si hubo cambio de seleccion
 				if (update_p1) {
 					FillRect(p1_draw_x, p1_draw_y, 128, 64, 0x0000);
 					LCD_BitmapPartialTransparent(p1_draw_x, p1_draw_y, 128, 64, car_sel, p1_char * 128, 0, 768, BIKE_TRANSP);
@@ -636,11 +636,14 @@ int main(void)
 				HAL_Delay(50);
 			}
 
+			// Arrays de sprites e iconos disponibles, indexados por numero de personaje
 			const uint16_t* p1_choices[3] = {bike_blue, bike_samflyn, bike_kevinflyn};
 			const uint16_t* p2_choices[3] = {bike_orange, bike_clu, bike_ares};
 
 			const uint16_t* p1_icon_choices[3] = {icon_blue, icon_sam, icon_flyn};
 			const uint16_t* p2_icon_choices[3] = {icon_orange, icon_clu, icon_ares};
+
+			// Asignar sprite e icono segun seleccion final de cada jugador
 			p1_icon = p1_icon_choices[p1_char];
 			p2_icon = p2_icon_choices[p2_char];
 
@@ -650,228 +653,249 @@ int main(void)
 			HAL_Delay(1000);
 		}
 
-	  val = snprintf(msg, sizeof(msg), "%u", 0);
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		// Parar audio y cargar arena segun modo de juego seleccionado
+		val = snprintf(msg, sizeof(msg), "%u", 0);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
-	  if (selected_mode == 0) {
-		memset(arena_map, 0, sizeof(arena_map));
-		LCD_Bitmap(0, 0, 320, 240, arena_bg);
-	} else {
-		memcpy(arena_map, race_map, sizeof(arena_map));
-		Draw_BG_From_SD("speedcircuit_bg.bin");
-	}
+		if (selected_mode == 0) {
+			memset(arena_map, 0, sizeof(arena_map));
+			LCD_Bitmap(0, 0, 320, 240, arena_bg);
+		} else {
+			memcpy(arena_map, race_map, sizeof(arena_map));
+			Draw_BG_From_SD("speedcircuit_bg.bin");
+		}
 
-	  struct_mensaje snap = datosJugadores;
-	  uint8_t p_j1 = snap.j1_no;
-	  uint8_t p_j2 = snap.j2_no;
+		// Snapshot inicial de botones para detectar cambios de estado
+		struct_mensaje snap = datosJugadores;
+		uint8_t p_j1 = snap.j1_no;
+		uint8_t p_j2 = snap.j2_no;
 
-	  val = snprintf(msg, sizeof(msg), "%u", 4);
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		// Enviar comando de audio para inicio de motos
+		val = snprintf(msg, sizeof(msg), "%u", 4);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
 
-	  Bike bike = {
-		  .x           = BIKE_X_MIN,
-		  .y           = BIKE_Y_MIN,
-		  .prev_x      = BIKE_X_MIN,
-		  .prev_y      = BIKE_Y_MIN,
-		  .dir         = DIR_RIGHT,
-		  .speed       = BIKE_SPEED_NORMAL,
-		  .sheet       = p1_selected_sheet,
-		  .transp      = BIKE_TRANSP,
-		  .lives	   = 3,
-		  .icon 	   = p1_icon,
-		  .char_index  = p1_char,
-	  };
+		// Inicializar moto de Jugador 1
+		Bike bike = {
+			.x           = BIKE_X_MIN,
+			.y           = BIKE_Y_MIN,
+			.prev_x      = BIKE_X_MIN,
+			.prev_y      = BIKE_Y_MIN,
+			.dir         = DIR_RIGHT,
+			.speed       = BIKE_SPEED_NORMAL,
+			.sheet       = p1_selected_sheet,
+			.transp      = BIKE_TRANSP,
+			.lives       = 3,
+			.icon        = p1_icon,
+			.char_index  = p1_char,
+		};
 
-	  Bike bike2 = {
-		  .x           = BIKE_X_MAX,
-		  .y           = BIKE_Y_MAX,
-		  .prev_x      = BIKE_X_MAX,
-		  .prev_y      = BIKE_Y_MAX,
-		  .dir         = DIR_LEFT,
-		  .speed       = BIKE_SPEED_NORMAL,
-		  .sheet       = p2_selected_sheet,
-		  .transp      = BIKE_TRANSP,
-		  .lives	   = 3,
-		  .icon        = p2_icon,
-		  .char_index  = p2_char + 3,
-	  };
+		// Inicializar moto de Jugador 2
+		Bike bike2 = {
+			.x           = BIKE_X_MAX,
+			.y           = BIKE_Y_MAX,
+			.prev_x      = BIKE_X_MAX,
+			.prev_y      = BIKE_Y_MAX,
+			.dir         = DIR_LEFT,
+			.speed       = BIKE_SPEED_NORMAL,
+			.sheet       = p2_selected_sheet,
+			.transp      = BIKE_TRANSP,
+			.lives       = 3,
+			.icon        = p2_icon,
+			.char_index  = p2_char + 3,
+		};
 
-	  p1_trace_color = bike.sheet[1928];
-	  p2_trace_color = bike2.sheet[1928];
-	  bike.trail_color = p1_trace_color;
-	  bike2.trail_color = p2_trace_color;
+		// Extraer color de trazo desde el pixel de paleta del sprite (pixel fijo 1928)
+		p1_trace_color = bike.sheet[1928];
+		p2_trace_color = bike2.sheet[1928];
+		bike.trail_color = p1_trace_color;
+		bike2.trail_color = p2_trace_color;
 
+		// Renderizar ambas motos y dashboard en posicion inicial
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+						 bike.sheet, 8, (int)bike.dir, 0, 0,
+						 bike.transp, arena_bg, 320);
 
-	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
-					   bike.sheet, 8, (int)bike.dir, 0, 0,
-					   bike.transp, arena_bg, 320);
+		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
+						 bike2.sheet, 8, (int)bike2.dir, 0, 0,
+						 bike2.transp, arena_bg, 320);
 
-	  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
-					   bike2.sheet, 8, (int)bike2.dir, 0, 0,
-					   bike2.transp, arena_bg, 320);
+		Draw_Dashboard(&bike, &bike2);
 
-	  Draw_Dashboard(&bike, &bike2);
-
-	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+		// Reiniciar recepcion de datos UART
+		HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	  val = snprintf(msg, sizeof(msg), "%u", 3);
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-	  HAL_Delay(2000);
+		// Señal de audio para arranque de motos, espera antes de iniciar
+		val = snprintf(msg, sizeof(msg), "%u", 3);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_Delay(2000);
 
-	while (1) {
+		// Bucle de juego
+		while (1) {
 
-		struct_mensaje snap = datosJugadores;
+			// Leer inputs actuales de ambos jugadores
+			struct_mensaje snap = datosJugadores;
 
-		input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
-				&bike.speed);
-		input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
-				&bike2.speed);
+			input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
+					&bike.speed);
+			input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
+					&bike2.speed);
 
-		bike.prev_x = bike.x;
-		bike2.prev_x = bike2.x;
-		bike.prev_y = bike.y;
-		bike2.prev_y = bike2.y;
+			// Guardar posiciones anteriores para restauracion del fondo
+			bike.prev_x = bike.x;
+			bike2.prev_x = bike2.x;
+			bike.prev_y = bike.y;
+			bike2.prev_y = bike2.y;
 
-		// PLAYER 1
-		int steps1 = bike.speed / 2;
-		for (int s = 0; s < steps1; s++) {
-		    int screen_cx = bike.x + 7;
-		    int screen_cy = bike.y + 7;
+			// Avanzar moto Jugador 1 y marcar trazo en el mapa
+			int steps1 = bike.speed / 2;
+			for (int s = 0; s < steps1; s++) {
+				int screen_cx = bike.x + 7;
+				int screen_cy = bike.y + 7;
 
-		    int mx1 = (screen_cx - ARENA_X0) / 2;
-		    int my1 = (screen_cy - ARENA_Y0) / 2;
+				int mx1 = (screen_cx - ARENA_X0) / 2;
+				int my1 = (screen_cy - ARENA_Y0) / 2;
 
-		    if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
+				if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
 
-		    switch (bike.dir) {
-		        case DIR_RIGHT: bike.x += 2; break;
-		        case DIR_LEFT:  bike.x -= 2; break;
-		        case DIR_DOWN:  bike.y += 2; break;
-		        case DIR_UP:    bike.y -= 2; break;
-		    }
-		}
-
-		// PLAYER 2
-		int steps2 = bike2.speed / 2;
-		for (int s = 0; s < steps2; s++) {
-		    int screen_cx2 = bike2.x + 7;
-		    int screen_cy2 = bike2.y + 7;
-
-		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
-		    int my2 = (screen_cy2 - ARENA_Y0) / 2;
-
-		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 2;
-
-		    switch (bike2.dir) {
-		        case DIR_RIGHT: bike2.x += 2; break;
-		        case DIR_LEFT:  bike2.x -= 2; break;
-		        case DIR_DOWN:  bike2.y += 2; break;
-		        case DIR_UP:    bike2.y -= 2; break;
-		    }
-		}
-
-		// --- COLLISION DETECTION ---
-		int p1_crashed = 0;
-		int p2_crashed = 0;
-
-		// 1. Check bounds collision
-		if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
-		if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
-
-		// 2. Check collision against map
-		int hit1 = check_trace_collision(&bike);
-		int hit2 = check_trace_collision(&bike2);
-
-		// Normal wall collision detection
-		if (hit1 == 1) p1_crashed = 1;
-		if (hit2 == 1) p2_crashed = 1;
-
-		if (hit1 == 2) p2_crashed = 1;
-		if (hit2 == 2) p1_crashed = 1;
-
-		// 3. Check for head-on collisions
-		if (check_head_on(&bike, &bike2)) {
-			p1_crashed = 1;
-			p2_crashed = 1;
-		}
-
-		if (p1_crashed || p2_crashed) {
-			if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed, selected_mode)) {
-				int winner = 0; // 0 = Tie, 1 = Player 1, 2 = Player 2
-
-				if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
-				else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
-
-			    char win_msg[24];
-
-			    if (winner == 1){
-			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
-			    	FillRect(30, 95, 260, 50, 0x0000);
-			    	LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
-			    	char_wins[bike.char_index]++;
-			    }else if (winner == 2){
-			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
-			    	FillRect(30, 95, 260, 50, 0x0000);
-			    	LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
-			    	char_wins[bike2.char_index]++;
-			    }else if (winner == 0){
-			    	snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
-					FillRect(30, 95, 260, 50, 0x0000);
-					LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
-			    }
-
-			    if (winner != 0) Save_Scores();
-
-			    val = snprintf(msg, sizeof(msg), "%u", 0);
-			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-			    val = snprintf(msg, sizeof(msg), "%u", 7);
-			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
-			    while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
-			        HAL_Delay(50);
-			    break;
-			}
-			continue;
-		}
-
-		// Restaurar fondo y volver a mostrar motos
-		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
-		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
-
-		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
-				(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
-
-		LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
-		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
-
-		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
-				(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
-
-
-		if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
-
-			if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
-				val = snprintf(msg, sizeof(msg), "%u", 4);
-				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
-				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
-			} else if ((p_j1 != 1) || (p_j2 != 1)) {
-				val = snprintf(msg, sizeof(msg), "%u", 5);
-				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
-				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				switch (bike.dir) {
+					case DIR_RIGHT: bike.x += 2; break;
+					case DIR_LEFT:  bike.x -= 2; break;
+					case DIR_DOWN:  bike.y += 2; break;
+					case DIR_UP:    bike.y -= 2; break;
+				}
 			}
 
-			p_j1 = snap.j1_no;
-			p_j2 = snap.j2_no;
-		}
+			// Avanzar moto Jugador 2 y marcar trazo en el mapa
+			int steps2 = bike2.speed / 2;
+			for (int s = 0; s < steps2; s++) {
+				int screen_cx2 = bike2.x + 7;
+				int screen_cy2 = bike2.y + 7;
 
-		HAL_Delay(15);
-	}  // end inner game loop
+				int mx2 = (screen_cx2 - ARENA_X0) / 2;
+				int my2 = (screen_cy2 - ARENA_Y0) / 2;
 
-  } // end outer restart loop
+				if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 1;
+
+				switch (bike2.dir) {
+					case DIR_RIGHT: bike2.x += 2; break;
+					case DIR_LEFT:  bike2.x -= 2; break;
+					case DIR_DOWN:  bike2.y += 2; break;
+					case DIR_UP:    bike2.y -= 2; break;
+				}
+			}
+
+			// Deteccion de colisiones
+			int p1_crashed = 0;
+			int p2_crashed = 0;
+
+			// Verificar colision con bordes de pantalla
+			if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
+			if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
+
+			// Verificar colision contra trazos y paredes del mapa
+			int hit1 = check_trace_collision(&bike);
+			int hit2 = check_trace_collision(&bike2);
+
+			// Colision con pared: el jugador que choco muere
+			if (hit1 == 1) p1_crashed = 1;
+			if (hit2 == 1) p2_crashed = 1;
+
+			// Colision con trampa: danya al oponente
+			if (hit1 == 2) p2_crashed = 1;
+			if (hit2 == 2) p1_crashed = 1;
+
+			// Verificar colision frontal entre motos
+			if (check_head_on(&bike, &bike2)) {
+				p1_crashed = 1;
+				p2_crashed = 1;
+			}
+
+			// Procesar choque si algun jugador colisiono
+			if (p1_crashed || p2_crashed) {
+
+				// handle_crash retorna 1 si el juego termino (alguien sin vidas)
+				if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed, selected_mode)) {
+
+					// Determinar ganador segun vidas restantes
+					int winner = 0; // 0=Empate, 1=Jugador1, 2=Jugador2
+
+					if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
+					else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
+
+					// Mostrar mensaje de ganador en pantalla
+					char win_msg[24];
+
+					if (winner == 1) {
+						snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+						FillRect(30, 95, 260, 50, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+						char_wins[bike.char_index]++;
+					} else if (winner == 2) {
+						snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+						FillRect(30, 95, 260, 50, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
+						char_wins[bike2.char_index]++;
+					} else if (winner == 0) {
+						snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
+						FillRect(30, 95, 260, 50, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
+					}
+
+					// Guardar puntaje si hay ganador
+					if (winner != 0) Save_Scores();
+
+					// Parar audio y esperar input de cualquier jugador para volver al menu
+					val = snprintf(msg, sizeof(msg), "%u", 0);
+					HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+					val = snprintf(msg, sizeof(msg), "%u", 7);
+					HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+					while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
+						HAL_Delay(50);
+					break;
+				}
+				continue;
+			}
+
+			// Restaurar fondo en area de movimiento y redibujar motos
+			LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+					BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
+
+			LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
+					(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
+
+			LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+					BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
+
+			LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
+					(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
+
+
+			// Enviar señal de audio si cambia estado de algun boton
+			if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+
+				if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
+					// Ningun boton presionado: audio de motos en movimiento
+					val = snprintf(msg, sizeof(msg), "%u", 4);
+					HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				} else if ((p_j1 != 1) || (p_j2 != 1)) {
+					// Boton presionado: audio de turbo
+					val = snprintf(msg, sizeof(msg), "%u", 5);
+					HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+				}
+
+				p_j1 = snap.j1_no;
+				p_j2 = snap.j2_no;
+			}
+
+			HAL_Delay(15);
+		}  // fin del bucle de juego
+
+	} // fin del bucle principal
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -1162,17 +1186,21 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+// Callback de interrupcion UART, maneja sincronizacion y recepcion de paquetes de controles
+// Protocolo: espera byte 0xAA como inicio de trama, luego recibe 8 bytes de payload
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART1) {
         if (!sincronizado) {
             if (rx_byte == 0xAA) {
+                // Byte de inicio recibido, pasar a modo recepcion de payload
                 sincronizado = 1;
                 HAL_UART_Receive_IT(&huart1, rx_payload, 8);
             } else {
+                // Seguir buscando byte de inicio
                 HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
             }
         } else {
-            /* Full 8-byte payload in hand. Commit and go back to hunting. */
+            // Payload completo recibido, copiar al struct de jugadores y reiniciar
             memcpy((void *)&datosJugadores, rx_payload, sizeof(datosJugadores));
             sincronizado = 0;
 

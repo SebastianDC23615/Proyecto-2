@@ -392,7 +392,7 @@ void LCD_BitmapPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
 
     for (int j = 0; j < draw_h; j++) {
         for (int i = 0; i < draw_w; i++) {
-            // Calculate the exact index in the full 1D array based on the starting crop coordinates
+            // Calcular indice exacto en el arreglo 1D segun coordenadas de recorte
             int index = ((src_y + j) * src_total_w) + (src_x + i);
             uint16_t pixel = bitmap[index];
 
@@ -410,11 +410,11 @@ void LCD_BitmapPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
 void LCD_BitmapPartialTransparent(int x, int y, int draw_w, int draw_h, const uint16_t *bitmap, int src_x, int src_y, int src_total_w, uint16_t transpColor) {
     for (int j = 0; j < draw_h; j++) {
         for (int i = 0; i < draw_w; i++) {
-            // Calculate the exact index in the full 1D array based on the starting crop coordinates
+            // Calcular indice exacto en el arreglo 1D segun coordenadas de recorte
             int index = ((src_y + j) * src_total_w) + (src_x + i);
             uint16_t pixel = bitmap[index];
 
-            // Only draw the pixel if it is NOT the transparent color
+            // Dibujar pixel solo si no es el color transparente
             if (pixel != transpColor) {
                 LCD_CS_L();
                 SetWindows(x + i, y + j, x + i, y + j);
@@ -470,9 +470,9 @@ void LCD_FadeInPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
         }
         LCD_CS_H();
 
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
         level += speed;
-        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+        if (level > 32) level = 32; // Garantizar que el ultimo frame sea al 100% de brillo
     }
 }
 
@@ -501,9 +501,9 @@ void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t 
             }
         }
 
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
         level += speed;
-        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+        if (level > 32) level = 32; // Garantizar que el ultimo frame sea al 100% de brillo
     }
 }
 
@@ -552,17 +552,16 @@ void LCD_Sprite(int x, int y, int width, int height, const uint16_t *bitmap,
 }
 
 
-//----------------------------PROPIAS---------------------
-
+// Funciones propias de renderizado compuesto
 
 //***************************************************************************************************************************************
-// Sprite con transparencia + fondo compositeado — single pass, bulk SPI
-// Reemplaza RestoreBg + SpriteTransparent con una sola escritura por scanline.
-// transpColor : color tratado como transparente (ej: 0xF81F)
-// bg / bgWidth: bitmap de fondo completo y su ancho en píxeles
+// Sprite con transparencia + fondo compositeado — un solo paso, escritura en bloque por SPI
+// Combina RestoreBg y SpriteTransparent en una sola escritura por scanline
+// transpColor : color tratado como transparente
+// bg / bgWidth : bitmap de fondo completo y su ancho en pixeles
 //***************************************************************************************************************************************
 
-// Import the arena map from main.c so the display knows where the traces are
+// Importar arena_map y colores de trazos desde main.c para composicion de pantalla
 extern uint8_t arena_map[120][160];
 
 extern uint16_t p1_trace_color;
@@ -570,6 +569,9 @@ extern uint16_t p2_trace_color;
 
 static uint8_t _slbuf[320 * 2];
 
+//***************************************************************************************************************************************
+// Función interna para restaurar un rectangulo del fondo, aplicando trazos si los hay en el mapa
+//***************************************************************************************************************************************
 static void _restore_bg_rect(int x, int y, int w, int h,
                               const uint16_t *bg, unsigned int bgWidth,
                               int trail_sx0, int trail_sy0,
@@ -584,11 +586,11 @@ static void _restore_bg_rect(int x, int y, int w, int h,
             int px_y = y + j;
             uint16_t px;
 
-            // Map the screen coordinates to the 160x120 array (ARENA_X0=3, ARENA_Y0=41)
+            // Convertir coordenadas de pantalla al indice del mapa (ARENA_X0=3, ARENA_Y0=37)
             int map_x = (px_x - 3) / 2;
             int map_y = (px_y - 37) / 2;
 
-            // Check if there is a trace here, otherwise draw the normal background
+            // Si hay trazo en el mapa usar color de trazo correspondiente, si no usar fondo
             if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
             	px = (arena_map[map_y][map_x] == 1) ? p1_trace_color : p2_trace_color;
             } else {
@@ -617,11 +619,12 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
         for (int i = 0; i < width; i++) {
             int px_x = x + i;
             int px_y = y + j;
+            // Convertir coordenadas de pantalla al indice del mapa
             int map_x = (px_x - 3) / 2;
             int map_y = (px_y - 37) / 2;
             uint16_t px;
 
-            // Read from the map so the trace composites UNDER the transparent parts of the bike
+            // Leer mapa para componer trazo debajo de las partes transparentes del sprite
             if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
             	px = (arena_map[map_y][map_x] == 1) ? p1_trace_color : p2_trace_color;
             } else {
@@ -661,6 +664,10 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
     }
 }
 
+//***************************************************************************************************************************************
+// Función para restaurar solo el area del fondo que cambió entre la posicion anterior y la nueva
+// Calcula el delta de movimiento y restaura unicamente las franjas descubiertas (horizontal y vertical)
+//***************************************************************************************************************************************
 void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
                         int w, int h,
                         const uint16_t *bg, unsigned int bgWidth,

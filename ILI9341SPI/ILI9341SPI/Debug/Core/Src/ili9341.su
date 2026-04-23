@@ -16,6 +16,6 @@
 ../Core/Src/ili9341.c:455:6:LCD_FadeInPartial	56	static
 ../Core/Src/ili9341.c:482:6:LCD_FadeInTransparent	56	static
 ../Core/Src/ili9341.c:514:6:LCD_Sprite	64	static
-../Core/Src/ili9341.c:573:13:_restore_bg_rect	64	static
-../Core/Src/ili9341.c:610:6:LCD_SpriteOverBg	80	static
-../Core/Src/ili9341.c:664:6:LCD_RestoreBgDelta	72	static
+../Core/Src/ili9341.c:575:13:_restore_bg_rect	64	static
+../Core/Src/ili9341.c:612:6:LCD_SpriteOverBg	80	static
+../Core/Src/ili9341.c:671:6:LCD_RestoreBgDelta	72	static

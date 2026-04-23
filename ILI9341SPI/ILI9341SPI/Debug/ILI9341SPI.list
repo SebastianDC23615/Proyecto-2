@@ -27,25 +27,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  00068074  2**0
                   CONTENTS, READONLY
- 12 .debug_info   000119e8  00000000  00000000  000680a4  2**0
+ 12 .debug_info   000119f1  00000000  00000000  000680a4  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00002d76  00000000  00000000  00079a8c  2**0
+ 13 .debug_abbrev 00002d61  00000000  00000000  00079a95  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00000ea0  00000000  00000000  0007c808  2**3
+ 14 .debug_aranges 00000ea0  00000000  00000000  0007c7f8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00000b2b  00000000  00000000  0007d6a8  2**0
+ 15 .debug_rnglists 00000b2b  00000000  00000000  0007d698  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  00024b78  00000000  00000000  0007e1d3  2**0
+ 16 .debug_macro  00024b78  00000000  00000000  0007e1c3  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   00016a18  00000000  00000000  000a2d4b  2**0
+ 17 .debug_line   00016a15  00000000  00000000  000a2d3b  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000d0e00  00000000  00000000  000b9763  2**0
+ 18 .debug_str    000d0e00  00000000  00000000  000b9750  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  0018a563  2**0
+ 19 .comment      00000043  00000000  00000000  0018a550  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00003d8c  00000000  00000000  0018a5a8  2**2
+ 20 .debug_frame  00003d8c  00000000  00000000  0018a594  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000008a  00000000  00000000  0018e334  2**0
+ 21 .debug_line_str 0000008a  00000000  00000000  0018e320  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -3114,7 +3114,7 @@ void LCD_BitmapPartialTransparent(int x, int y, int draw_w, int draw_h, const ui
  800165c:	2300      	movs	r3, #0
  800165e:	61bb      	str	r3, [r7, #24]
  8001660:	e043      	b.n	80016ea <LCD_BitmapPartialTransparent+0xa2>
-            // Calculate the exact index in the full 1D array based on the starting crop coordinates
+            // Calcular indice exacto en el arreglo 1D segun coordenadas de recorte
             int index = ((src_y + j) * src_total_w) + (src_x + i);
  8001662:	6bba      	ldr	r2, [r7, #56]	@ 0x38
  8001664:	69fb      	ldr	r3, [r7, #28]
@@ -3134,7 +3134,7 @@ void LCD_BitmapPartialTransparent(int x, int y, int draw_w, int draw_h, const ui
  8001680:	881b      	ldrh	r3, [r3, #0]
  8001682:	827b      	strh	r3, [r7, #18]
 
-            // Only draw the pixel if it is NOT the transparent color
+            // Dibujar pixel solo si no es el color transparente
             if (pixel != transpColor) {
  8001684:	8a7a      	ldrh	r2, [r7, #18]
  8001686:	f8b7 3040 	ldrh.w	r3, [r7, #64]	@ 0x40
@@ -3407,7 +3407,7 @@ void LCD_FadeInPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
  8001850:	2201      	movs	r2, #1
  8001852:	619a      	str	r2, [r3, #24]
 
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
  8001854:	6a7b      	ldr	r3, [r7, #36]	@ 0x24
  8001856:	2b20      	cmp	r3, #32
  8001858:	d00c      	beq.n	8001874 <LCD_FadeInPartial+0xd4>
@@ -3416,7 +3416,7 @@ void LCD_FadeInPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
  800185c:	6cbb      	ldr	r3, [r7, #72]	@ 0x48
  800185e:	4413      	add	r3, r2
  8001860:	627b      	str	r3, [r7, #36]	@ 0x24
-        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+        if (level > 32) level = 32; // Garantizar que el ultimo frame sea al 100% de brillo
  8001862:	6a7b      	ldr	r3, [r7, #36]	@ 0x24
  8001864:	2b20      	cmp	r3, #32
  8001866:	dd01      	ble.n	800186c <LCD_FadeInPartial+0xcc>
@@ -3429,7 +3429,7 @@ void LCD_FadeInPartial(int x, int y, int draw_w, int draw_h, const uint16_t *bit
     }
 }
  8001872:	e000      	b.n	8001876 <LCD_FadeInPartial+0xd6>
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
  8001874:	bf00      	nop
 }
  8001876:	bf00      	nop
@@ -3561,7 +3561,7 @@ void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t 
             }
         }
 
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
  800194e:	6a7b      	ldr	r3, [r7, #36]	@ 0x24
  8001950:	2b20      	cmp	r3, #32
  8001952:	d00c      	beq.n	800196e <LCD_FadeInTransparent+0xe6>
@@ -3570,7 +3570,7 @@ void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t 
  8001956:	6c3b      	ldr	r3, [r7, #64]	@ 0x40
  8001958:	4413      	add	r3, r2
  800195a:	627b      	str	r3, [r7, #36]	@ 0x24
-        if (level > 32) level = 32; // Guarantee the final frame is 100% brightness
+        if (level > 32) level = 32; // Garantizar que el ultimo frame sea al 100% de brillo
  800195c:	6a7b      	ldr	r3, [r7, #36]	@ 0x24
  800195e:	2b20      	cmp	r3, #32
  8001960:	dd01      	ble.n	8001966 <LCD_FadeInTransparent+0xde>
@@ -3583,7 +3583,7 @@ void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t 
     }
 }
  800196c:	e000      	b.n	8001970 <LCD_FadeInTransparent+0xe8>
-        if (level == 32) break; // Finished
+        if (level == 32) break; // Terminado
  800196e:	bf00      	nop
 }
  8001970:	bf00      	nop
@@ -3594,7 +3594,7 @@ void LCD_FadeInTransparent(int x, int y, int draw_w, int draw_h, const uint16_t 
  800197c:	40020000 	.word	0x40020000
 
 08001980 <_restore_bg_rect>:
-
+//***************************************************************************************************************************************
 static void _restore_bg_rect(int x, int y, int w, int h,
                               const uint16_t *bg, unsigned int bgWidth,
                               int trail_sx0, int trail_sy0,
@@ -3636,7 +3636,7 @@ static void _restore_bg_rect(int x, int y, int w, int h,
  80019b8:	61fb      	str	r3, [r7, #28]
             uint16_t px;
 
-            // Map the screen coordinates to the 160x120 array (ARENA_X0=3, ARENA_Y0=41)
+            // Convertir coordenadas de pantalla al indice del mapa (ARENA_X0=3, ARENA_Y0=37)
             int map_x = (px_x - 3) / 2;
  80019ba:	6a3b      	ldr	r3, [r7, #32]
  80019bc:	3b03      	subs	r3, #3
@@ -3652,7 +3652,7 @@ static void _restore_bg_rect(int x, int y, int w, int h,
  80019ce:	105b      	asrs	r3, r3, #1
  80019d0:	617b      	str	r3, [r7, #20]
 
-            // Check if there is a trace here, otherwise draw the normal background
+            // Si hay trazo en el mapa usar color de trazo correspondiente, si no usar fondo
             if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
  80019d2:	69bb      	ldr	r3, [r7, #24]
  80019d4:	2b00      	cmp	r3, #0
@@ -3837,6 +3837,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
  8001b16:	6bfb      	ldr	r3, [r7, #60]	@ 0x3c
  8001b18:	4413      	add	r3, r2
  8001b1a:	61bb      	str	r3, [r7, #24]
+            // Convertir coordenadas de pantalla al indice del mapa
             int map_x = (px_x - 3) / 2;
  8001b1c:	69fb      	ldr	r3, [r7, #28]
  8001b1e:	3b03      	subs	r3, #3
@@ -3853,7 +3854,7 @@ void LCD_SpriteOverBg(int x, int y, int width, int height,
  8001b32:	613b      	str	r3, [r7, #16]
             uint16_t px;
 
-            // Read from the map so the trace composites UNDER the transparent parts of the bike
+            // Leer mapa para componer trazo debajo de las partes transparentes del sprite
             if (map_x >= 0 && map_x < 160 && map_y >= 0 && map_y < 120 && arena_map[map_y][map_x] != 0) {
  8001b34:	697b      	ldr	r3, [r7, #20]
  8001b36:	2b00      	cmp	r3, #0
@@ -4367,8 +4368,8 @@ void LCD_RestoreBgDelta(int old_x, int old_y, int new_x, int new_y,
 FATFS fs;
 FRESULT fres;
 
-// BG Loading, directly to screen
-
+// Función para leer linea por linea de bitmap en almacenamiento de SD y cargar directamente a pantalla
+// Se realiza de esta manera para evitar sobrecargar el bus al momento de cargar nuevo fondo
 void Draw_BG_From_SD(const char* filename) {
  8001ebc:	b580      	push	{r7, lr}
  8001ebe:	f5ad 5d96 	sub.w	sp, sp, #4800	@ 0x12c0
@@ -4392,8 +4393,7 @@ void Draw_BG_From_SD(const char* filename) {
  8001ee6:	4603      	mov	r3, r0
  8001ee8:	2b00      	cmp	r3, #0
  8001eea:	d147      	bne.n	8001f7c <Draw_BG_From_SD+0xc0>
-        // SetWindows sends commands via LCD_CMD, which manages CS itself.
-        // It ends with CS_H and DC_L after the 0x2C (RAMWR) command.
+        // Función setwindows utiliza comandos LCD_cmd y se encarga de configuracion
         SetWindows(0, 0, 319, 239);
  8001eec:	23ef      	movs	r3, #239	@ 0xef
  8001eee:	f240 123f 	movw	r2, #319	@ 0x13f
@@ -4401,7 +4401,7 @@ void Draw_BG_From_SD(const char* filename) {
  8001ef4:	2000      	movs	r0, #0
  8001ef6:	f7ff f9a9 	bl	800124c <SetWindows>
 
-        // Now manually enter data mode for the bulk pixel transfer.
+        //Configurar modo manual
         LCD_DC_H();
  8001efa:	4b25      	ldr	r3, [pc, #148]	@ (8001f90 <Draw_BG_From_SD+0xd4>)
  8001efc:	2210      	movs	r2, #16
@@ -4411,6 +4411,7 @@ void Draw_BG_From_SD(const char* filename) {
  8001f02:	f44f 3280 	mov.w	r2, #65536	@ 0x10000
  8001f06:	619a      	str	r2, [r3, #24]
 
+        //Realizar lectura de SD y escritura a LCD linea por linea
         for (int y = 0; y < 240; y++) {
  8001f08:	2300      	movs	r3, #0
  8001f0a:	f507 5295 	add.w	r2, r7, #4768	@ 0x12a0
@@ -4452,6 +4453,7 @@ void Draw_BG_From_SD(const char* filename) {
  8001f68:	4b0a      	ldr	r3, [pc, #40]	@ (8001f94 <Draw_BG_From_SD+0xd8>)
  8001f6a:	2201      	movs	r2, #1
  8001f6c:	619a      	str	r2, [r3, #24]
+        // cerrar SD
         f_close(&file);
  8001f6e:	f507 7328 	add.w	r3, r7, #672	@ 0x2a0
  8001f72:	3b14      	subs	r3, #20
@@ -4477,7 +4479,7 @@ void Draw_BG_From_SD(const char* filename) {
 
 08001f9c <Save_Scores>:
 
-//Caracter scores
+// Funciones para puntaje de cada personaje <Sin utilizar>
 
 uint16_t char_wins[6] = {0, 0, 0, 0, 0, 0}; // 0=Blue, 1=Sam, 2=Kevin, 3=Orange, 4=Clu, 5=Ares
 
@@ -4489,7 +4491,7 @@ void Save_Scores() {
     FIL file;
     UINT bytes_written;
 
-    // Open the file (FA_CREATE_ALWAYS ensures it creates a new file or overwrites the old one)
+    // Abrir archivo
     if (f_open(&file, "scores.bin", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
  8001fa6:	f107 0318 	add.w	r3, r7, #24
  8001faa:	3b10      	subs	r3, #16
@@ -4500,7 +4502,7 @@ void Save_Scores() {
  8001fb6:	4603      	mov	r3, r0
  8001fb8:	2b00      	cmp	r3, #0
  8001fba:	d10f      	bne.n	8001fdc <Save_Scores+0x40>
-        // Write the exact 12 bytes (6 uint16_t) of data to the SD Card
+        // Escribir mensaje especifico
         f_write(&file, char_wins, sizeof(char_wins), &bytes_written);
  8001fbc:	f107 0318 	add.w	r3, r7, #24
  8001fc0:	3b14      	subs	r3, #20
@@ -4526,6 +4528,7 @@ void Save_Scores() {
 
 08001ff0 <Load_Scores>:
 
+// Cargar puntuaciones
 void Load_Scores() {
  8001ff0:	b580      	push	{r7, lr}
  8001ff2:	f5ad 5d81 	sub.w	sp, sp, #4128	@ 0x1020
@@ -4534,7 +4537,7 @@ void Load_Scores() {
     FIL file;
     UINT bytes_read;
 
-    // Try to open the file to read it
+    // Abrir archivo y cargar
     if (f_open(&file, "scores.bin", FA_READ) == FR_OK) {
  8001ffa:	f107 0318 	add.w	r3, r7, #24
  8001ffe:	3b10      	subs	r3, #16
@@ -4558,9 +4561,8 @@ void Load_Scores() {
  8002028:	3b10      	subs	r3, #16
  800202a:	4618      	mov	r0, r3
  800202c:	f007 ff03 	bl	8009e36 <f_close>
-        // FILE DOES NOT EXIST!
-        // This is a fresh SD card. Call Save_Scores() to create 'scores.bin'
-        // right now using the default zeros in our char_wins array.
+    } else {
+    	// Manda sobreescribir o crear archivo si no existe
         Save_Scores();
     }
 }
@@ -4579,8 +4581,8 @@ void Load_Scores() {
 
 0800204c <Draw_Dashboard>:
 
-// Lives icon logic
-
+// Lógica para el renderizado de los 'iconos' o vidas en parte superior de pantalla
+// 3 personajes diferentes por jugador, distribuir 3 iconos en pantalla
 void Draw_Dashboard(Bike *b1, Bike *b2) {
  800204c:	b580      	push	{r7, lr}
  800204e:	b08e      	sub	sp, #56	@ 0x38
@@ -4677,6 +4679,7 @@ void Draw_Dashboard(Bike *b1, Bike *b2) {
 
 08002100 <Explode_Life_Icon>:
 
+// Cargar animacion de los iconos de vidas al momento que un jugador pierda una vida
 void Explode_Life_Icon(int x, int y, const uint16_t *icon) {
  8002100:	b580      	push	{r7, lr}
  8002102:	b08e      	sub	sp, #56	@ 0x38
@@ -4735,24 +4738,24 @@ void Explode_Life_Icon(int x, int y, const uint16_t *icon) {
     *hh = r->h;
 }
 
-/* 1. Check if the head of the bike hit a trace */
+// Función para verificar colisiones contra cabeza de moto
 int check_trace_collision(Bike *b) {
  8002164:	b480      	push	{r7}
  8002166:	b087      	sub	sp, #28
  8002168:	af00      	add	r7, sp, #0
  800216a:	6078      	str	r0, [r7, #4]
-    int head_x = b->x + 7; // Center X
+    int head_x = b->x + 7; // centro X
  800216c:	687b      	ldr	r3, [r7, #4]
  800216e:	681b      	ldr	r3, [r3, #0]
  8002170:	3307      	adds	r3, #7
  8002172:	617b      	str	r3, [r7, #20]
-    int head_y = b->y + 7; // Center Y
+    int head_y = b->y + 7; // centro Y
  8002174:	687b      	ldr	r3, [r7, #4]
  8002176:	685b      	ldr	r3, [r3, #4]
  8002178:	3307      	adds	r3, #7
  800217a:	613b      	str	r3, [r7, #16]
 
-    // Push the check coordinate to the absolute front edge
+    // Mover coordinada de chequeo para el frente, verificar donde hubo colision
     if (b->dir == DIR_UP) head_y = b->y;
  800217c:	687b      	ldr	r3, [r7, #4]
  800217e:	7c1b      	ldrb	r3, [r3, #16]
@@ -4806,7 +4809,7 @@ int check_trace_collision(Bike *b) {
  80021d2:	105b      	asrs	r3, r3, #1
  80021d4:	60bb      	str	r3, [r7, #8]
 
-    // Return exactly what was hit (0=Empty, 1=Wall/Trace, 2=Trap)
+    // Retornar el contenido exacto con lo que tuvo contacto el objeto
     if (mx >= 0 && mx < ARENA_W_TILES && my >= 0 && my < ARENA_H_TILES) {
  80021d6:	68fb      	ldr	r3, [r7, #12]
  80021d8:	2b00      	cmp	r3, #0
@@ -4833,7 +4836,7 @@ int check_trace_collision(Bike *b) {
  8002200:	781b      	ldrb	r3, [r3, #0]
  8002202:	e000      	b.n	8002206 <check_trace_collision+0xa2>
     }
-    return 1; // Treat driving completely out of bounds as hitting a wall
+    return 1; // Si es fuera de bordes, tomar como colision normal
  8002204:	2301      	movs	r3, #1
 }
  8002206:	4618      	mov	r0, r3
@@ -4846,7 +4849,8 @@ int check_trace_collision(Bike *b) {
 
 08002218 <check_head_on>:
 
-/* 2. Check if the bikes hit each other head-on */
+// Función para verificar colisiones frontales entre las dos motos
+// Compara las coordenadas X e Y de ambas motos.
 int check_head_on(Bike *b1, Bike *b2) {
  8002218:	b480      	push	{r7}
  800221a:	b085      	sub	sp, #20
@@ -4867,7 +4871,7 @@ int check_head_on(Bike *b1, Bike *b2) {
  8002234:	685b      	ldr	r3, [r3, #4]
  8002236:	1ad3      	subs	r3, r2, r3
  8002238:	60bb      	str	r3, [r7, #8]
-    // If the centers of both bikes are within 10 pixels of each other, they crashed
+    // Si los centros de ambas motos están a menos de 10 píxeles de distancia, se considera un choque frontal
     if (dx > -10 && dx < 10 && dy > -10 && dy < 10) return 1;
  800223a:	68fb      	ldr	r3, [r7, #12]
  800223c:	f113 0f09 	cmn.w	r3, #9
@@ -4894,7 +4898,8 @@ int check_head_on(Bike *b1, Bike *b2) {
 
 08002268 <handle_crash>:
 
-/* 3. Handle the animation, lives, and map reset. Returns 1 if the game is over. */
+// Función principal que maneja la lógica posterior a un choque (animación, vidas, reinicio)
+// mode = 0 (Duel), mode = 1 (Race/Cache Leak)
 int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  8002268:	b5b0      	push	{r4, r5, r7, lr}
  800226a:	b08e      	sub	sp, #56	@ 0x38
@@ -4922,7 +4927,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  8002296:	488c      	ldr	r0, [pc, #560]	@ (80024c8 <handle_crash+0x260>)
  8002298:	f003 fde8 	bl	8005e6c <HAL_UART_Transmit>
 
-    // Play on-field explosion (frames 4-7 of the bike sheet)
+    // Reproducir animación de explosión en la pista (frames 4-7 de la hoja de sprites)
     for (int frame = 4; frame <= 7; frame++) {
  800229c:	2304      	movs	r3, #4
  800229e:	617b      	str	r3, [r7, #20]
@@ -4999,9 +5004,8 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  800232a:	ddba      	ble.n	80022a2 <handle_crash+0x3a>
     }
 
-    // Deduct lives, then play the dashboard explosion on the slot that just died.
-    // After decrement, b->lives is the new count; that value is also the 0-based
-    // index of the slot that was lost (e.g. 3→2 loses slot 2).
+    // Quitar vidas y reproducir explosión en el dashboard
+    // El valor b->lives se usa como índice para determinar que icono destruir
     if (p1_crashed) {
  800232c:	687b      	ldr	r3, [r7, #4]
  800232e:	2b00      	cmp	r3, #0
@@ -5045,7 +5049,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  8002372:	f7ff fec5 	bl	8002100 <Explode_Life_Icon>
     }
 
-    // Game over if either player is out of lives
+    // Terminar juego cuando algun jugador se quede sin vidas
     if (b1->lives <= 0 || b2->lives <= 0)
  8002376:	68fb      	ldr	r3, [r7, #12]
  8002378:	6a1b      	ldr	r3, [r3, #32]
@@ -5098,7 +5102,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  80023c8:	741a      	strb	r2, [r3, #16]
 
 
-    // Reload the correct background and map based on gamemode
+    // Cargar fondo de pantalla dependiendo de modo de juego
 	if (mode == 0) {
  80023ca:	6abb      	ldr	r3, [r7, #40]	@ 0x28
  80023cc:	2b00      	cmp	r3, #0
@@ -5131,6 +5135,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
  8002404:	f7ff fd5a 	bl	8001ebc <Draw_BG_From_SD>
 	}
 
+	// Dibujar 'dashboard' que contiene vidas
     Draw_Dashboard(b1, b2);
  8002408:	68b9      	ldr	r1, [r7, #8]
  800240a:	68f8      	ldr	r0, [r7, #12]
@@ -5196,6 +5201,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
     HAL_Delay(2000);
  8002484:	f44f 60fa 	mov.w	r0, #2000	@ 0x7d0
  8002488:	f001 fee4 	bl	8004254 <HAL_Delay>
+    //enviar comando de audio para iniciar motos
     val = snprintf(msg, sizeof(msg), "%u", 4);
  800248c:	2304      	movs	r3, #4
  800248e:	4a0b      	ldr	r2, [pc, #44]	@ (80024bc <handle_crash+0x254>)
@@ -5232,6 +5238,7 @@ int handle_crash(Bike *b1, Bike *b2, int p1_crashed, int p2_crashed, int mode) {
 
 080024dc <input_to_bike>:
 
+// Pegar los inputs del struct a las respectivas variables de las motos
 static inline void input_to_bike(uint8_t jx, uint8_t jy,
                                  uint8_t btn_slow, uint8_t btn_fast,
                                  BikeDir *io_dir, int *out_speed) {
@@ -5295,7 +5302,7 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
  8002540:	2301      	movs	r3, #1
  8002542:	f887 3027 	strb.w	r3, [r7, #39]	@ 0x27
  8002546:	e00b      	b.n	8002560 <input_to_bike+0x84>
-        else if (ay > ax) requested = (dy > 0) ? DIR_UP  : DIR_DOWN;
+        else if (ay > ax) requested = (dy > 0) ? DIR_DOWN  : DIR_UP;
  8002548:	697a      	ldr	r2, [r7, #20]
  800254a:	69bb      	ldr	r3, [r7, #24]
  800254c:	429a      	cmp	r2, r3
@@ -5303,13 +5310,13 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
  8002550:	69fb      	ldr	r3, [r7, #28]
  8002552:	2b00      	cmp	r3, #0
  8002554:	dd01      	ble.n	800255a <input_to_bike+0x7e>
- 8002556:	2300      	movs	r3, #0
+ 8002556:	2302      	movs	r3, #2
  8002558:	e000      	b.n	800255c <input_to_bike+0x80>
- 800255a:	2302      	movs	r3, #2
+ 800255a:	2300      	movs	r3, #0
  800255c:	f887 3027 	strb.w	r3, [r7, #39]	@ 0x27
     }
 
-    // Reject 180° reversal
+    // Evitar giros de 180 grados
     BikeDir cur = *io_dir;
  8002560:	6b3b      	ldr	r3, [r7, #48]	@ 0x30
  8002562:	781b      	ldrb	r3, [r3, #0]
@@ -5360,6 +5367,7 @@ static inline void input_to_bike(uint8_t jx, uint8_t jy,
  80025ae:	f897 2027 	ldrb.w	r2, [r7, #39]	@ 0x27
  80025b2:	701a      	strb	r2, [r3, #0]
 
+    // logica de velocidades
     if (btn_fast) *out_speed = BIKE_SPEED_FAST;
  80025b4:	793b      	ldrb	r3, [r7, #4]
  80025b6:	2b00      	cmp	r3, #0
@@ -5427,7 +5435,8 @@ int main(void)
  80025fa:	f004 fc53 	bl	8006ea4 <MX_FATFS_Init>
   /* USER CODE BEGIN 2 */
 
-  	  val = snprintf(msg, sizeof(msg), "%u", 0);
+		// Parar todo audio
+		val = snprintf(msg, sizeof(msg), "%u", 0);
  80025fe:	2300      	movs	r3, #0
  8002600:	4ac9      	ldr	r2, [pc, #804]	@ (8002928 <main+0x354>)
  8002602:	2103      	movs	r1, #3
@@ -5437,7 +5446,7 @@ int main(void)
  800260c:	b2da      	uxtb	r2, r3
  800260e:	4bc8      	ldr	r3, [pc, #800]	@ (8002930 <main+0x35c>)
  8002610:	701a      	strb	r2, [r3, #0]
-  	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  8002612:	4bc7      	ldr	r3, [pc, #796]	@ (8002930 <main+0x35c>)
  8002614:	781b      	ldrb	r3, [r3, #0]
  8002616:	461a      	mov	r2, r3
@@ -5446,33 +5455,34 @@ int main(void)
  800261e:	48c5      	ldr	r0, [pc, #788]	@ (8002934 <main+0x360>)
  8002620:	f003 fc24 	bl	8005e6c <HAL_UART_Transmit>
 
-	  LCD_Init();
+		// Limpiar pantalla
+		LCD_Init();
  8002624:	f7fe fcc2 	bl	8000fac <LCD_Init>
-	  LCD_Clear(0x0000);
+		LCD_Clear(0x0000);
  8002628:	2000      	movs	r0, #0
  800262a:	f7fe fe4f 	bl	80012cc <LCD_Clear>
 
-	  f_mount(&fs, "", 1);
+		// Montar tarjeta SD
+		f_mount(&fs, "", 1);
  800262e:	2201      	movs	r2, #1
  8002630:	49c1      	ldr	r1, [pc, #772]	@ (8002938 <main+0x364>)
  8002632:	48c2      	ldr	r0, [pc, #776]	@ (800293c <main+0x368>)
  8002634:	f006 fe80 	bl	8009338 <f_mount>
-	  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+		hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
  8002638:	4bc1      	ldr	r3, [pc, #772]	@ (8002940 <main+0x36c>)
  800263a:	2208      	movs	r2, #8
  800263c:	61da      	str	r2, [r3, #28]
-	  HAL_SPI_Init(&hspi2);
+		HAL_SPI_Init(&hspi2);
  800263e:	48c0      	ldr	r0, [pc, #768]	@ (8002940 <main+0x36c>)
  8002640:	f002 ff72 	bl	8005528 <HAL_SPI_Init>
-	  Load_Scores();
+		Load_Scores();
  8002644:	f7ff fcd4 	bl	8001ff0 <Load_Scores>
 
-	  // Start Animation
-
-	  HAL_Delay(2000);
+		// Iniciar animación de Startup
+		HAL_Delay(2000);
  8002648:	f44f 60fa 	mov.w	r0, #2000	@ 0x7d0
  800264c:	f001 fe02 	bl	8004254 <HAL_Delay>
-	  LCD_FadeInPartial(189, 79, 5, 3, cinematic, 26, 41, 63, 2);
+		LCD_FadeInPartial(189, 79, 5, 3, cinematic, 26, 41, 63, 2);
  8002650:	2302      	movs	r3, #2
  8002652:	9304      	str	r3, [sp, #16]
  8002654:	233f      	movs	r3, #63	@ 0x3f
@@ -5488,11 +5498,11 @@ int main(void)
  8002668:	214f      	movs	r1, #79	@ 0x4f
  800266a:	20bd      	movs	r0, #189	@ 0xbd
  800266c:	f7ff f898 	bl	80017a0 <LCD_FadeInPartial>
-	  HAL_Delay(2000);
+		HAL_Delay(2000);
  8002670:	f44f 60fa 	mov.w	r0, #2000	@ 0x7d0
  8002674:	f001 fdee 	bl	8004254 <HAL_Delay>
 
-	  val = snprintf(msg, sizeof(msg), "%u", 1);
+		val = snprintf(msg, sizeof(msg), "%u", 1);
  8002678:	2301      	movs	r3, #1
  800267a:	4aab      	ldr	r2, [pc, #684]	@ (8002928 <main+0x354>)
  800267c:	2103      	movs	r1, #3
@@ -5502,7 +5512,7 @@ int main(void)
  8002686:	b2da      	uxtb	r2, r3
  8002688:	4ba9      	ldr	r3, [pc, #676]	@ (8002930 <main+0x35c>)
  800268a:	701a      	strb	r2, [r3, #0]
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  800268c:	4ba8      	ldr	r3, [pc, #672]	@ (8002930 <main+0x35c>)
  800268e:	781b      	ldrb	r3, [r3, #0]
  8002690:	461a      	mov	r2, r3
@@ -5511,7 +5521,7 @@ int main(void)
  8002698:	48a6      	ldr	r0, [pc, #664]	@ (8002934 <main+0x360>)
  800269a:	f003 fbe7 	bl	8005e6c <HAL_UART_Transmit>
 
-	  LCD_FadeInTransparent(163, 38, 63, 108, cinematic, BIKE_TRANSP, 4);
+		LCD_FadeInTransparent(163, 38, 63, 108, cinematic, BIKE_TRANSP, 4);
  800269e:	2304      	movs	r3, #4
  80026a0:	9302      	str	r3, [sp, #8]
  80026a2:	f240 2363 	movw	r3, #611	@ 0x263
@@ -5523,19 +5533,22 @@ int main(void)
  80026b0:	2126      	movs	r1, #38	@ 0x26
  80026b2:	20a3      	movs	r0, #163	@ 0xa3
  80026b4:	f7ff f8e8 	bl	8001888 <LCD_FadeInTransparent>
-	  HAL_Delay(1000);
+		HAL_Delay(1000);
  80026b8:	f44f 707a 	mov.w	r0, #1000	@ 0x3e8
  80026bc:	f001 fdca 	bl	8004254 <HAL_Delay>
-  while (1) { // outer restart loop — returns here after each game ends
 
-	  Draw_BG_From_SD("menu.bin");
+
+		while (1) { //Bucle principal, siempre se regresará aqui cuando termine una ronda
+
+		// Dibujar el menu de la SD
+		Draw_BG_From_SD("menu.bin");
  80026c0:	48a1      	ldr	r0, [pc, #644]	@ (8002948 <main+0x374>)
  80026c2:	f7ff fbfb 	bl	8001ebc <Draw_BG_From_SD>
-	  HAL_Delay(2000);
+		HAL_Delay(2000);
  80026c6:	f44f 60fa 	mov.w	r0, #2000	@ 0x7d0
  80026ca:	f001 fdc3 	bl	8004254 <HAL_Delay>
 
-	  val = snprintf(msg, sizeof(msg), "%u", 2);
+		val = snprintf(msg, sizeof(msg), "%u", 2);
  80026ce:	2302      	movs	r3, #2
  80026d0:	4a95      	ldr	r2, [pc, #596]	@ (8002928 <main+0x354>)
  80026d2:	2103      	movs	r1, #3
@@ -5545,7 +5558,7 @@ int main(void)
  80026dc:	b2da      	uxtb	r2, r3
  80026de:	4b94      	ldr	r3, [pc, #592]	@ (8002930 <main+0x35c>)
  80026e0:	701a      	strb	r2, [r3, #0]
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  80026e2:	4b93      	ldr	r3, [pc, #588]	@ (8002930 <main+0x35c>)
  80026e4:	781b      	ldrb	r3, [r3, #0]
  80026e6:	461a      	mov	r2, r3
@@ -5554,13 +5567,14 @@ int main(void)
  80026ee:	4891      	ldr	r0, [pc, #580]	@ (8002934 <main+0x360>)
  80026f0:	f003 fbbc 	bl	8005e6c <HAL_UART_Transmit>
 
-	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+		// Empezar a recibir datos
+		HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
  80026f4:	2201      	movs	r2, #1
  80026f6:	4995      	ldr	r1, [pc, #596]	@ (800294c <main+0x378>)
  80026f8:	4895      	ldr	r0, [pc, #596]	@ (8002950 <main+0x37c>)
  80026fa:	f003 fc42 	bl	8005f82 <HAL_UART_Receive_IT>
 
-	  // Main Menu (Gamemode select)
+		// Menu principal
 		uint8_t Play = 0;
  80026fe:	2300      	movs	r3, #0
  8002700:	f887 314f 	strb.w	r3, [r7, #335]	@ 0x14f
@@ -5585,7 +5599,8 @@ int main(void)
  8002728:	23c8      	movs	r3, #200	@ 0xc8
  800272a:	f8c7 3100 	str.w	r3, [r7, #256]	@ 0x100
 
-	  while (Play == 0) {
+		// Seleccion de modo de juego
+		while (Play == 0) {
  800272e:	e06c      	b.n	800280a <main+0x236>
 			struct_mensaje snap = datosJugadores;
  8002730:	4a88      	ldr	r2, [pc, #544]	@ (8002954 <main+0x380>)
@@ -5593,24 +5608,24 @@ int main(void)
  8002736:	e892 0003 	ldmia.w	r2, {r0, r1}
  800273a:	e883 0003 	stmia.w	r3, {r0, r1}
 
-			if (snap.j1_y > 170 && prev_j1_y <= 170) {
+			if (snap.j1_y < 80 && prev_j1_y >= 80) {
  800273e:	f897 30b5 	ldrb.w	r3, [r7, #181]	@ 0xb5
- 8002742:	2baa      	cmp	r3, #170	@ 0xaa
- 8002744:	d907      	bls.n	8002756 <main+0x182>
+ 8002742:	2b4f      	cmp	r3, #79	@ 0x4f
+ 8002744:	d807      	bhi.n	8002756 <main+0x182>
  8002746:	f897 3147 	ldrb.w	r3, [r7, #327]	@ 0x147
- 800274a:	2baa      	cmp	r3, #170	@ 0xaa
- 800274c:	d803      	bhi.n	8002756 <main+0x182>
+ 800274a:	2b4f      	cmp	r3, #79	@ 0x4f
+ 800274c:	d903      	bls.n	8002756 <main+0x182>
 				selected_mode = 0;
  800274e:	2300      	movs	r3, #0
  8002750:	f8c7 3148 	str.w	r3, [r7, #328]	@ 0x148
  8002754:	e00a      	b.n	800276c <main+0x198>
-			} else if (snap.j1_y < 80 && prev_j1_y >= 80) {
+			} else if (snap.j1_y > 170 && prev_j1_y <= 170) {
  8002756:	f897 30b5 	ldrb.w	r3, [r7, #181]	@ 0xb5
- 800275a:	2b4f      	cmp	r3, #79	@ 0x4f
- 800275c:	d806      	bhi.n	800276c <main+0x198>
+ 800275a:	2baa      	cmp	r3, #170	@ 0xaa
+ 800275c:	d906      	bls.n	800276c <main+0x198>
  800275e:	f897 3147 	ldrb.w	r3, [r7, #327]	@ 0x147
- 8002762:	2b4f      	cmp	r3, #79	@ 0x4f
- 8002764:	d902      	bls.n	800276c <main+0x198>
+ 8002762:	2baa      	cmp	r3, #170	@ 0xaa
+ 8002764:	d802      	bhi.n	800276c <main+0x198>
 				selected_mode = 1;
  8002766:	2301      	movs	r3, #1
  8002768:	f8c7 3148 	str.w	r3, [r7, #328]	@ 0x148
@@ -5619,7 +5634,7 @@ int main(void)
  800276c:	f897 30b5 	ldrb.w	r3, [r7, #181]	@ 0xb5
  8002770:	f887 3147 	strb.w	r3, [r7, #327]	@ 0x147
 
-			// 2. Render Menu Text (with background color 0x0000 / Black)
+			//Texto de menu
 			if (selected_mode == 0) {
  8002774:	f8d7 3148 	ldr.w	r3, [r7, #328]	@ 0x148
  8002778:	2b00      	cmp	r3, #0
@@ -5668,7 +5683,6 @@ int main(void)
  80027e2:	f7fe fe01 	bl	80013e8 <LCD_Print>
 			}
 
-			// 3. Handle Selection Confirm (j1_no pressed)
 			if (snap.j1_no != 0 && prev_j1_no == 0) {
  80027e6:	f897 30b1 	ldrb.w	r3, [r7, #177]	@ 0xb1
  80027ea:	2b00      	cmp	r3, #0
@@ -5687,46 +5701,48 @@ int main(void)
 			HAL_Delay(50);
  8002804:	2032      	movs	r0, #50	@ 0x32
  8002806:	f001 fd25 	bl	8004254 <HAL_Delay>
-	  while (Play == 0) {
+		while (Play == 0) {
  800280a:	f897 314f 	ldrb.w	r3, [r7, #335]	@ 0x14f
  800280e:	2b00      	cmp	r3, #0
  8002810:	d08e      	beq.n	8002730 <main+0x15c>
 
 
 
-	  }
+		}
 
-	  LCD_Clear(0x0000);
+		LCD_Clear(0x0000);
  8002812:	2000      	movs	r0, #0
  8002814:	f7fe fd5a 	bl	80012cc <LCD_Clear>
-	  HAL_Delay(500);
+		HAL_Delay(500);
  8002818:	f44f 70fa 	mov.w	r0, #500	@ 0x1f4
  800281c:	f001 fd1a 	bl	8004254 <HAL_Delay>
 
 
-	  // CHARACTER SELECTION MENU
+		// Menu de selección de personaje
 
-	  const uint16_t *p1_selected_sheet = bike_blue;
+		// personajes por defecto
+		const uint16_t *p1_selected_sheet = bike_blue;
  8002820:	4b51      	ldr	r3, [pc, #324]	@ (8002968 <main+0x394>)
  8002822:	f8c7 3140 	str.w	r3, [r7, #320]	@ 0x140
-	  const uint16_t *p2_selected_sheet = bike_orange;
+		const uint16_t *p2_selected_sheet = bike_orange;
  8002826:	4b51      	ldr	r3, [pc, #324]	@ (800296c <main+0x398>)
  8002828:	f8c7 313c 	str.w	r3, [r7, #316]	@ 0x13c
 
-	  const uint16_t *p1_icon = icon_blue;
+		const uint16_t *p1_icon = icon_blue;
  800282c:	4b50      	ldr	r3, [pc, #320]	@ (8002970 <main+0x39c>)
  800282e:	f8c7 3138 	str.w	r3, [r7, #312]	@ 0x138
-	  const uint16_t *p2_icon = icon_orange;
+		const uint16_t *p2_icon = icon_orange;
  8002832:	4b50      	ldr	r3, [pc, #320]	@ (8002974 <main+0x3a0>)
  8002834:	f8c7 3134 	str.w	r3, [r7, #308]	@ 0x134
 
-	  uint8_t p1_char = 0; // 0=Blue, 1=Sam, 2=Kevin
+		uint8_t p1_char = 0; // 0=Blue, 1=Sam, 2=Kevin
  8002838:	2300      	movs	r3, #0
  800283a:	f887 3133 	strb.w	r3, [r7, #307]	@ 0x133
-	  uint8_t p2_char = 0; // 0=Orange, 1=Clu, 2=Ares
+		uint8_t p2_char = 0; // 0=Orange, 1=Clu, 2=Ares
  800283e:	2300      	movs	r3, #0
  8002840:	f887 3132 	strb.w	r3, [r7, #306]	@ 0x132
 
+		// Inicializar pantalla de seleccion de personaje
 		if (selected_mode == 0 || selected_mode == 1) {
  8002844:	f8d7 3148 	ldr.w	r3, [r7, #328]	@ 0x148
  8002848:	2b00      	cmp	r3, #0
@@ -5794,6 +5810,7 @@ int main(void)
  80028c4:	2301      	movs	r3, #1
  80028c6:	f887 312b 	strb.w	r3, [r7, #299]	@ 0x12b
 
+			// Bucle para seleccion de personaje hasta que ambos esten listos
 			while (!p1_ready || !p2_ready) {
  80028ca:	e15d      	b.n	8002b88 <main+0x5b4>
 				struct_mensaje snap = datosJugadores;
@@ -5811,7 +5828,7 @@ int main(void)
  80028ea:	2300      	movs	r3, #0
  80028ec:	f887 312b 	strb.w	r3, [r7, #299]	@ 0x12b
 
-				// --- Player 1 Navigation ---
+				// Navegacion de jugador 1
 				if (!p1_ready) {
  80028f0:	f897 3131 	ldrb.w	r3, [r7, #305]	@ 0x131
  80028f4:	2b00      	cmp	r3, #0
@@ -5893,7 +5910,7 @@ int main(void)
  80029c2:	f897 312d 	ldrb.w	r3, [r7, #301]	@ 0x12d
  80029c6:	2b00      	cmp	r3, #0
  80029c8:	d10b      	bne.n	80029e2 <main+0x40e>
-					p1_ready = !p1_ready; // Lock/Unlock choice
+					p1_ready = !p1_ready; // Seleccionar o deseleccionar
  80029ca:	f897 3131 	ldrb.w	r3, [r7, #305]	@ 0x131
  80029ce:	2b00      	cmp	r3, #0
  80029d0:	bf0c      	ite	eq
@@ -5906,7 +5923,7 @@ int main(void)
  80029de:	f887 312a 	strb.w	r3, [r7, #298]	@ 0x12a
 				}
 
-				// --- Player 2 Navigation ---
+				// Navegacion de jugador 2
 				if (!p2_ready) {
  80029e2:	f897 3130 	ldrb.w	r3, [r7, #304]	@ 0x130
  80029e6:	2b00      	cmp	r3, #0
@@ -5965,7 +5982,7 @@ int main(void)
  8002a58:	f897 312c 	ldrb.w	r3, [r7, #300]	@ 0x12c
  8002a5c:	2b00      	cmp	r3, #0
  8002a5e:	d10b      	bne.n	8002a78 <main+0x4a4>
-					p2_ready = !p2_ready; // Lock/Unlock choice
+					p2_ready = !p2_ready; // Seleccionar o deseleccionar
  8002a60:	f897 3130 	ldrb.w	r3, [r7, #304]	@ 0x130
  8002a64:	2b00      	cmp	r3, #0
  8002a66:	bf0c      	ite	eq
@@ -5985,7 +6002,7 @@ int main(void)
  8002a80:	f897 307b 	ldrb.w	r3, [r7, #123]	@ 0x7b
  8002a84:	f887 312c 	strb.w	r3, [r7, #300]	@ 0x12c
 
-				// --- Render Updates ---
+				// Actualizar sprites en pantalla si hubo cambio de seleccion
 				if (update_p1) {
  8002a88:	f897 312a 	ldrb.w	r3, [r7, #298]	@ 0x12a
  8002a8c:	2b00      	cmp	r3, #0
@@ -6111,6 +6128,7 @@ int main(void)
  8002b98:	f43f ae98 	beq.w	80028cc <main+0x2f8>
 			}
 
+			// Arrays de sprites e iconos disponibles, indexados por numero de personaje
 			const uint16_t* p1_choices[3] = {bike_blue, bike_samflyn, bike_kevinflyn};
  8002b9c:	4a38      	ldr	r2, [pc, #224]	@ (8002c80 <main+0x6ac>)
  8002b9e:	f107 03a4 	add.w	r3, r7, #164	@ 0xa4
@@ -6132,6 +6150,8 @@ int main(void)
  8002bc2:	f107 0380 	add.w	r3, r7, #128	@ 0x80
  8002bc6:	ca07      	ldmia	r2, {r0, r1, r2}
  8002bc8:	e883 0007 	stmia.w	r3, {r0, r1, r2}
+
+			// Asignar sprite e icono segun seleccion final de cada jugador
 			p1_icon = p1_icon_choices[p1_char];
  8002bcc:	f897 3133 	ldrb.w	r3, [r7, #307]	@ 0x133
  8002bd0:	009b      	lsls	r3, r3, #2
@@ -6167,7 +6187,8 @@ int main(void)
  8002c20:	f001 fb18 	bl	8004254 <HAL_Delay>
 		}
 
-	  val = snprintf(msg, sizeof(msg), "%u", 0);
+		// Parar audio y cargar arena segun modo de juego seleccionado
+		val = snprintf(msg, sizeof(msg), "%u", 0);
  8002c24:	2300      	movs	r3, #0
  8002c26:	4a1a      	ldr	r2, [pc, #104]	@ (8002c90 <main+0x6bc>)
  8002c28:	2103      	movs	r1, #3
@@ -6177,7 +6198,7 @@ int main(void)
  8002c32:	b2da      	uxtb	r2, r3
  8002c34:	4b18      	ldr	r3, [pc, #96]	@ (8002c98 <main+0x6c4>)
  8002c36:	701a      	strb	r2, [r3, #0]
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  8002c38:	4b17      	ldr	r3, [pc, #92]	@ (8002c98 <main+0x6c4>)
  8002c3a:	781b      	ldrb	r3, [r3, #0]
  8002c3c:	461a      	mov	r2, r3
@@ -6186,16 +6207,16 @@ int main(void)
  8002c44:	4815      	ldr	r0, [pc, #84]	@ (8002c9c <main+0x6c8>)
  8002c46:	f003 f911 	bl	8005e6c <HAL_UART_Transmit>
 
-	  if (selected_mode == 0) {
+		if (selected_mode == 0) {
  8002c4a:	f8d7 3148 	ldr.w	r3, [r7, #328]	@ 0x148
  8002c4e:	2b00      	cmp	r3, #0
  8002c50:	d12a      	bne.n	8002ca8 <main+0x6d4>
-		memset(arena_map, 0, sizeof(arena_map));
+			memset(arena_map, 0, sizeof(arena_map));
  8002c52:	f44f 4296 	mov.w	r2, #19200	@ 0x4b00
  8002c56:	2100      	movs	r1, #0
  8002c58:	4811      	ldr	r0, [pc, #68]	@ (8002ca0 <main+0x6cc>)
  8002c5a:	f007 fa6f 	bl	800a13c <memset>
-		LCD_Bitmap(0, 0, 320, 240, arena_bg);
+			LCD_Bitmap(0, 0, 320, 240, arena_bg);
  8002c5e:	4b11      	ldr	r3, [pc, #68]	@ (8002ca4 <main+0x6d0>)
  8002c60:	9300      	str	r3, [sp, #0]
  8002c62:	23f0      	movs	r3, #240	@ 0xf0
@@ -6218,8 +6239,8 @@ int main(void)
  8002c9c:	20000458 	.word	0x20000458
  8002ca0:	200004a0 	.word	0x200004a0
  8002ca4:	0800bc28 	.word	0x0800bc28
-	} else {
-		memcpy(arena_map, race_map, sizeof(arena_map));
+		} else {
+			memcpy(arena_map, race_map, sizeof(arena_map));
  8002ca8:	4ad1      	ldr	r2, [pc, #836]	@ (8002ff0 <main+0xa1c>)
  8002caa:	4bd2      	ldr	r3, [pc, #840]	@ (8002ff4 <main+0xa20>)
  8002cac:	4610      	mov	r0, r2
@@ -6227,24 +6248,26 @@ int main(void)
  8002cb0:	f44f 4396 	mov.w	r3, #19200	@ 0x4b00
  8002cb4:	461a      	mov	r2, r3
  8002cb6:	f007 fa75 	bl	800a1a4 <memcpy>
-		Draw_BG_From_SD("speedcircuit_bg.bin");
+			Draw_BG_From_SD("speedcircuit_bg.bin");
  8002cba:	48cf      	ldr	r0, [pc, #828]	@ (8002ff8 <main+0xa24>)
  8002cbc:	f7ff f8fe 	bl	8001ebc <Draw_BG_From_SD>
-	}
+		}
 
-	  struct_mensaje snap = datosJugadores;
+		// Snapshot inicial de botones para detectar cambios de estado
+		struct_mensaje snap = datosJugadores;
  8002cc0:	4ace      	ldr	r2, [pc, #824]	@ (8002ffc <main+0xa28>)
  8002cc2:	f107 03b8 	add.w	r3, r7, #184	@ 0xb8
  8002cc6:	e892 0003 	ldmia.w	r2, {r0, r1}
  8002cca:	e883 0003 	stmia.w	r3, {r0, r1}
-	  uint8_t p_j1 = snap.j1_no;
+		uint8_t p_j1 = snap.j1_no;
  8002cce:	f897 30b9 	ldrb.w	r3, [r7, #185]	@ 0xb9
  8002cd2:	f887 3128 	strb.w	r3, [r7, #296]	@ 0x128
-	  uint8_t p_j2 = snap.j2_no;
+		uint8_t p_j2 = snap.j2_no;
  8002cd6:	f897 30bb 	ldrb.w	r3, [r7, #187]	@ 0xbb
  8002cda:	f887 3127 	strb.w	r3, [r7, #295]	@ 0x127
 
-	  val = snprintf(msg, sizeof(msg), "%u", 4);
+		// Enviar comando de audio para inicio de motos
+		val = snprintf(msg, sizeof(msg), "%u", 4);
  8002cde:	2304      	movs	r3, #4
  8002ce0:	4ac7      	ldr	r2, [pc, #796]	@ (8003000 <main+0xa2c>)
  8002ce2:	2103      	movs	r1, #3
@@ -6254,7 +6277,7 @@ int main(void)
  8002cec:	b2da      	uxtb	r2, r3
  8002cee:	4bc6      	ldr	r3, [pc, #792]	@ (8003008 <main+0xa34>)
  8002cf0:	701a      	strb	r2, [r3, #0]
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  8002cf2:	4bc5      	ldr	r3, [pc, #788]	@ (8003008 <main+0xa34>)
  8002cf4:	781b      	ldrb	r3, [r3, #0]
  8002cf6:	461a      	mov	r2, r3
@@ -6263,7 +6286,8 @@ int main(void)
  8002cfe:	48c3      	ldr	r0, [pc, #780]	@ (800300c <main+0xa38>)
  8002d00:	f003 f8b4 	bl	8005e6c <HAL_UART_Transmit>
 
-	  Bike bike = {
+		// Inicializar moto de Jugador 1
+		Bike bike = {
  8002d04:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002d08:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002d0c:	4618      	mov	r0, r3
@@ -6315,12 +6339,12 @@ int main(void)
  8002d9a:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002d9e:	f897 2133 	ldrb.w	r2, [r7, #307]	@ 0x133
  8002da2:	f883 2028 	strb.w	r2, [r3, #40]	@ 0x28
-		  .lives	   = 3,
-		  .icon 	   = p1_icon,
-		  .char_index  = p1_char,
-	  };
+			.icon        = p1_icon,
+			.char_index  = p1_char,
+		};
 
-	  Bike bike2 = {
+		// Inicializar moto de Jugador 2
+		Bike bike2 = {
  8002da6:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002daa:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002dae:	4618      	mov	r0, r3
@@ -6368,22 +6392,23 @@ int main(void)
  8002e32:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002e36:	f8d7 2134 	ldr.w	r2, [r7, #308]	@ 0x134
  8002e3a:	625a      	str	r2, [r3, #36]	@ 0x24
-		  .speed       = BIKE_SPEED_NORMAL,
-		  .sheet       = p2_selected_sheet,
-		  .transp      = BIKE_TRANSP,
-		  .lives	   = 3,
-		  .icon        = p2_icon,
-		  .char_index  = p2_char + 3,
+			.speed       = BIKE_SPEED_NORMAL,
+			.sheet       = p2_selected_sheet,
+			.transp      = BIKE_TRANSP,
+			.lives       = 3,
+			.icon        = p2_icon,
+			.char_index  = p2_char + 3,
  8002e3c:	f897 3132 	ldrb.w	r3, [r7, #306]	@ 0x132
  8002e40:	3303      	adds	r3, #3
  8002e42:	b2da      	uxtb	r2, r3
-	  Bike bike2 = {
+		Bike bike2 = {
  8002e44:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e48:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002e4c:	f883 2028 	strb.w	r2, [r3, #40]	@ 0x28
-	  };
+		};
 
-	  p1_trace_color = bike.sheet[1928];
+		// Extraer color de trazo desde el pixel de paleta del sprite (pixel fijo 1928)
+		p1_trace_color = bike.sheet[1928];
  8002e50:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e54:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002e58:	699b      	ldr	r3, [r3, #24]
@@ -6391,7 +6416,7 @@ int main(void)
  8002e5e:	881a      	ldrh	r2, [r3, #0]
  8002e60:	4b6b      	ldr	r3, [pc, #428]	@ (8003010 <main+0xa3c>)
  8002e62:	801a      	strh	r2, [r3, #0]
-	  p2_trace_color = bike2.sheet[1928];
+		p2_trace_color = bike2.sheet[1928];
  8002e64:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e68:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002e6c:	699b      	ldr	r3, [r3, #24]
@@ -6399,21 +6424,21 @@ int main(void)
  8002e72:	881a      	ldrh	r2, [r3, #0]
  8002e74:	4b67      	ldr	r3, [pc, #412]	@ (8003014 <main+0xa40>)
  8002e76:	801a      	strh	r2, [r3, #0]
-	  bike.trail_color = p1_trace_color;
+		bike.trail_color = p1_trace_color;
  8002e78:	4b65      	ldr	r3, [pc, #404]	@ (8003010 <main+0xa3c>)
  8002e7a:	881a      	ldrh	r2, [r3, #0]
  8002e7c:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e80:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002e84:	83da      	strh	r2, [r3, #30]
-	  bike2.trail_color = p2_trace_color;
+		bike2.trail_color = p2_trace_color;
  8002e86:	4b63      	ldr	r3, [pc, #396]	@ (8003014 <main+0xa40>)
  8002e88:	881a      	ldrh	r2, [r3, #0]
  8002e8a:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e8e:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002e92:	83da      	strh	r2, [r3, #30]
 
-
-	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+		// Renderizar ambas motos y dashboard en posicion inicial
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
  8002e94:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002e98:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002e9c:	6818      	ldr	r0, [r3, #0]
@@ -6423,11 +6448,11 @@ int main(void)
  8002ea8:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002eac:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002eb0:	699b      	ldr	r3, [r3, #24]
-					   bike.sheet, 8, (int)bike.dir, 0, 0,
+						 bike.sheet, 8, (int)bike.dir, 0, 0,
  8002eb2:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8002eb6:	f5a2 72a8 	sub.w	r2, r2, #336	@ 0x150
  8002eba:	7c12      	ldrb	r2, [r2, #16]
-	  LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
+		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H,
  8002ebc:	4615      	mov	r5, r2
  8002ebe:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8002ec2:	f5a2 72a8 	sub.w	r2, r2, #336	@ 0x150
@@ -6448,9 +6473,9 @@ int main(void)
  8002ee4:	2310      	movs	r3, #16
  8002ee6:	2210      	movs	r2, #16
  8002ee8:	f7fe fdfe 	bl	8001ae8 <LCD_SpriteOverBg>
-					   bike.transp, arena_bg, 320);
+						 bike.transp, arena_bg, 320);
 
-	  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
+		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
  8002eec:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002ef0:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002ef4:	6818      	ldr	r0, [r3, #0]
@@ -6460,11 +6485,11 @@ int main(void)
  8002f00:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002f04:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8002f08:	699b      	ldr	r3, [r3, #24]
-					   bike2.sheet, 8, (int)bike2.dir, 0, 0,
+						 bike2.sheet, 8, (int)bike2.dir, 0, 0,
  8002f0a:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8002f0e:	f5a2 7292 	sub.w	r2, r2, #292	@ 0x124
  8002f12:	7c12      	ldrb	r2, [r2, #16]
-	  LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
+		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H,
  8002f14:	4615      	mov	r5, r2
  8002f16:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8002f1a:	f5a2 7292 	sub.w	r2, r2, #292	@ 0x124
@@ -6485,26 +6510,27 @@ int main(void)
  8002f3c:	2310      	movs	r3, #16
  8002f3e:	2210      	movs	r2, #16
  8002f40:	f7fe fdd2 	bl	8001ae8 <LCD_SpriteOverBg>
-					   bike2.transp, arena_bg, 320);
+						 bike2.transp, arena_bg, 320);
 
-	  Draw_Dashboard(&bike, &bike2);
+		Draw_Dashboard(&bike, &bike2);
  8002f44:	f107 022c 	add.w	r2, r7, #44	@ 0x2c
  8002f48:	463b      	mov	r3, r7
  8002f4a:	4611      	mov	r1, r2
  8002f4c:	4618      	mov	r0, r3
  8002f4e:	f7ff f87d 	bl	800204c <Draw_Dashboard>
 
-	  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+		// Reiniciar recepcion de datos UART
+		HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
  8002f52:	2201      	movs	r2, #1
  8002f54:	4931      	ldr	r1, [pc, #196]	@ (800301c <main+0xa48>)
  8002f56:	4832      	ldr	r0, [pc, #200]	@ (8003020 <main+0xa4c>)
  8002f58:	f003 f813 	bl	8005f82 <HAL_UART_Receive_IT>
-  /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	  val = snprintf(msg, sizeof(msg), "%u", 3);
+		// Señal de audio para arranque de motos, espera antes de iniciar
+		val = snprintf(msg, sizeof(msg), "%u", 3);
  8002f5c:	2303      	movs	r3, #3
  8002f5e:	4a28      	ldr	r2, [pc, #160]	@ (8003000 <main+0xa2c>)
  8002f60:	2103      	movs	r1, #3
@@ -6514,7 +6540,7 @@ int main(void)
  8002f6a:	b2da      	uxtb	r2, r3
  8002f6c:	4b26      	ldr	r3, [pc, #152]	@ (8003008 <main+0xa34>)
  8002f6e:	701a      	strb	r2, [r3, #0]
-	  HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  8002f70:	4b25      	ldr	r3, [pc, #148]	@ (8003008 <main+0xa34>)
  8002f72:	781b      	ldrb	r3, [r3, #0]
  8002f74:	461a      	mov	r2, r3
@@ -6522,19 +6548,21 @@ int main(void)
  8002f7a:	4922      	ldr	r1, [pc, #136]	@ (8003004 <main+0xa30>)
  8002f7c:	4823      	ldr	r0, [pc, #140]	@ (800300c <main+0xa38>)
  8002f7e:	f002 ff75 	bl	8005e6c <HAL_UART_Transmit>
-	  HAL_Delay(2000);
+		HAL_Delay(2000);
  8002f82:	f44f 60fa 	mov.w	r0, #2000	@ 0x7d0
  8002f86:	f001 f965 	bl	8004254 <HAL_Delay>
 
-	while (1) {
+		// Bucle de juego
+		while (1) {
 
-		struct_mensaje snap = datosJugadores;
+			// Leer inputs actuales de ambos jugadores
+			struct_mensaje snap = datosJugadores;
  8002f8a:	4a1c      	ldr	r2, [pc, #112]	@ (8002ffc <main+0xa28>)
  8002f8c:	f107 0370 	add.w	r3, r7, #112	@ 0x70
  8002f90:	e892 0003 	ldmia.w	r2, {r0, r1}
  8002f94:	e883 0003 	stmia.w	r3, {r0, r1}
 
-		input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
+			input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir,
  8002f98:	f897 0074 	ldrb.w	r0, [r7, #116]	@ 0x74
  8002f9c:	f897 1075 	ldrb.w	r1, [r7, #117]	@ 0x75
  8002fa0:	f897 2070 	ldrb.w	r2, [r7, #112]	@ 0x70
@@ -6547,8 +6575,8 @@ int main(void)
  8002fb2:	9300      	str	r3, [sp, #0]
  8002fb4:	4623      	mov	r3, r4
  8002fb6:	f7ff fa91 	bl	80024dc <input_to_bike>
-				&bike.speed);
-		input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
+					&bike.speed);
+			input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir,
  8002fba:	f897 0076 	ldrb.w	r0, [r7, #118]	@ 0x76
  8002fbe:	f897 1077 	ldrb.w	r1, [r7, #119]	@ 0x77
  8002fc2:	f897 2072 	ldrb.w	r2, [r7, #114]	@ 0x72
@@ -6561,9 +6589,10 @@ int main(void)
  8002fd8:	9300      	str	r3, [sp, #0]
  8002fda:	4623      	mov	r3, r4
  8002fdc:	f7ff fa7e 	bl	80024dc <input_to_bike>
-				&bike2.speed);
+					&bike2.speed);
 
-		bike.prev_x = bike.x;
+			// Guardar posiciones anteriores para restauracion del fondo
+			bike.prev_x = bike.x;
  8002fe0:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8002fe4:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8002fe8:	681a      	ldr	r2, [r3, #0]
@@ -6584,21 +6613,21 @@ int main(void)
  8003020:	200003c8 	.word	0x200003c8
  8003024:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003028:	609a      	str	r2, [r3, #8]
-		bike2.prev_x = bike2.x;
+			bike2.prev_x = bike2.x;
  800302a:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800302e:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003032:	681a      	ldr	r2, [r3, #0]
  8003034:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003038:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  800303c:	609a      	str	r2, [r3, #8]
-		bike.prev_y = bike.y;
+			bike.prev_y = bike.y;
  800303e:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003042:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003046:	685a      	ldr	r2, [r3, #4]
  8003048:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800304c:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003050:	60da      	str	r2, [r3, #12]
-		bike2.prev_y = bike2.y;
+			bike2.prev_y = bike2.y;
  8003052:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003056:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  800305a:	685a      	ldr	r2, [r3, #4]
@@ -6606,8 +6635,8 @@ int main(void)
  8003060:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003064:	60da      	str	r2, [r3, #12]
 
-		// PLAYER 1
-		int steps1 = bike.speed / 2;
+			// Avanzar moto Jugador 1 y marcar trazo en el mapa
+			int steps1 = bike.speed / 2;
  8003066:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800306a:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800306e:	695b      	ldr	r3, [r3, #20]
@@ -6615,31 +6644,31 @@ int main(void)
  8003072:	4413      	add	r3, r2
  8003074:	105b      	asrs	r3, r3, #1
  8003076:	f8c7 30ec 	str.w	r3, [r7, #236]	@ 0xec
-		for (int s = 0; s < steps1; s++) {
+			for (int s = 0; s < steps1; s++) {
  800307a:	2300      	movs	r3, #0
  800307c:	f8c7 3120 	str.w	r3, [r7, #288]	@ 0x120
  8003080:	e083      	b.n	800318a <main+0xbb6>
-		    int screen_cx = bike.x + 7;
+				int screen_cx = bike.x + 7;
  8003082:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003086:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800308a:	681b      	ldr	r3, [r3, #0]
  800308c:	3307      	adds	r3, #7
  800308e:	f8c7 30cc 	str.w	r3, [r7, #204]	@ 0xcc
-		    int screen_cy = bike.y + 7;
+				int screen_cy = bike.y + 7;
  8003092:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003096:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800309a:	685b      	ldr	r3, [r3, #4]
  800309c:	3307      	adds	r3, #7
  800309e:	f8c7 30c8 	str.w	r3, [r7, #200]	@ 0xc8
 
-		    int mx1 = (screen_cx - ARENA_X0) / 2;
+				int mx1 = (screen_cx - ARENA_X0) / 2;
  80030a2:	f8d7 30cc 	ldr.w	r3, [r7, #204]	@ 0xcc
  80030a6:	3b02      	subs	r3, #2
  80030a8:	0fda      	lsrs	r2, r3, #31
  80030aa:	4413      	add	r3, r2
  80030ac:	105b      	asrs	r3, r3, #1
  80030ae:	f8c7 30c4 	str.w	r3, [r7, #196]	@ 0xc4
-		    int my1 = (screen_cy - ARENA_Y0) / 2;
+				int my1 = (screen_cy - ARENA_Y0) / 2;
  80030b2:	f8d7 30c8 	ldr.w	r3, [r7, #200]	@ 0xc8
  80030b6:	3b24      	subs	r3, #36	@ 0x24
  80030b8:	0fda      	lsrs	r2, r3, #31
@@ -6647,7 +6676,7 @@ int main(void)
  80030bc:	105b      	asrs	r3, r3, #1
  80030be:	f8c7 30c0 	str.w	r3, [r7, #192]	@ 0xc0
 
-		    if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
+				if (mx1 >= 0 && mx1 < ARENA_W_TILES && my1 >= 0 && my1 < ARENA_H_TILES) arena_map[my1][mx1] = 1;
  80030c2:	f8d7 30c4 	ldr.w	r3, [r7, #196]	@ 0xc4
  80030c6:	2b00      	cmp	r3, #0
  80030c8:	db18      	blt.n	80030fc <main+0xb28>
@@ -6672,7 +6701,7 @@ int main(void)
  80030f8:	2201      	movs	r2, #1
  80030fa:	701a      	strb	r2, [r3, #0]
 
-		    switch (bike.dir) {
+				switch (bike.dir) {
  80030fc:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003100:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003104:	7c1b      	ldrb	r3, [r3, #16]
@@ -6684,7 +6713,7 @@ int main(void)
  8003114:	08003139 	.word	0x08003139
  8003118:	08003151 	.word	0x08003151
  800311c:	08003121 	.word	0x08003121
-		        case DIR_RIGHT: bike.x += 2; break;
+					case DIR_RIGHT: bike.x += 2; break;
  8003120:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003124:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003128:	681b      	ldr	r3, [r3, #0]
@@ -6693,7 +6722,7 @@ int main(void)
  8003130:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003134:	601a      	str	r2, [r3, #0]
  8003136:	e023      	b.n	8003180 <main+0xbac>
-		        case DIR_LEFT:  bike.x -= 2; break;
+					case DIR_LEFT:  bike.x -= 2; break;
  8003138:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800313c:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003140:	681b      	ldr	r3, [r3, #0]
@@ -6702,7 +6731,7 @@ int main(void)
  8003148:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800314c:	601a      	str	r2, [r3, #0]
  800314e:	e017      	b.n	8003180 <main+0xbac>
-		        case DIR_DOWN:  bike.y += 2; break;
+					case DIR_DOWN:  bike.y += 2; break;
  8003150:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003154:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003158:	685b      	ldr	r3, [r3, #4]
@@ -6711,7 +6740,7 @@ int main(void)
  8003160:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003164:	605a      	str	r2, [r3, #4]
  8003166:	e00b      	b.n	8003180 <main+0xbac>
-		        case DIR_UP:    bike.y -= 2; break;
+					case DIR_UP:    bike.y -= 2; break;
  8003168:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800316c:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003170:	685b      	ldr	r3, [r3, #4]
@@ -6720,7 +6749,7 @@ int main(void)
  8003178:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800317c:	605a      	str	r2, [r3, #4]
  800317e:	bf00      	nop
-		for (int s = 0; s < steps1; s++) {
+			for (int s = 0; s < steps1; s++) {
  8003180:	f8d7 3120 	ldr.w	r3, [r7, #288]	@ 0x120
  8003184:	3301      	adds	r3, #1
  8003186:	f8c7 3120 	str.w	r3, [r7, #288]	@ 0x120
@@ -6728,11 +6757,11 @@ int main(void)
  800318e:	f8d7 30ec 	ldr.w	r3, [r7, #236]	@ 0xec
  8003192:	429a      	cmp	r2, r3
  8003194:	f6ff af75 	blt.w	8003082 <main+0xaae>
-		    }
-		}
+				}
+			}
 
-		// PLAYER 2
-		int steps2 = bike2.speed / 2;
+			// Avanzar moto Jugador 2 y marcar trazo en el mapa
+			int steps2 = bike2.speed / 2;
  8003198:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800319c:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80031a0:	695b      	ldr	r3, [r3, #20]
@@ -6740,31 +6769,31 @@ int main(void)
  80031a4:	4413      	add	r3, r2
  80031a6:	105b      	asrs	r3, r3, #1
  80031a8:	f8c7 30e8 	str.w	r3, [r7, #232]	@ 0xe8
-		for (int s = 0; s < steps2; s++) {
+			for (int s = 0; s < steps2; s++) {
  80031ac:	2300      	movs	r3, #0
  80031ae:	f8c7 311c 	str.w	r3, [r7, #284]	@ 0x11c
  80031b2:	e086      	b.n	80032c2 <main+0xcee>
-		    int screen_cx2 = bike2.x + 7;
+				int screen_cx2 = bike2.x + 7;
  80031b4:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80031b8:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80031bc:	681b      	ldr	r3, [r3, #0]
  80031be:	3307      	adds	r3, #7
  80031c0:	f8c7 30dc 	str.w	r3, [r7, #220]	@ 0xdc
-		    int screen_cy2 = bike2.y + 7;
+				int screen_cy2 = bike2.y + 7;
  80031c4:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80031c8:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80031cc:	685b      	ldr	r3, [r3, #4]
  80031ce:	3307      	adds	r3, #7
  80031d0:	f8c7 30d8 	str.w	r3, [r7, #216]	@ 0xd8
 
-		    int mx2 = (screen_cx2 - ARENA_X0) / 2;
+				int mx2 = (screen_cx2 - ARENA_X0) / 2;
  80031d4:	f8d7 30dc 	ldr.w	r3, [r7, #220]	@ 0xdc
  80031d8:	3b02      	subs	r3, #2
  80031da:	0fda      	lsrs	r2, r3, #31
  80031dc:	4413      	add	r3, r2
  80031de:	105b      	asrs	r3, r3, #1
  80031e0:	f8c7 30d4 	str.w	r3, [r7, #212]	@ 0xd4
-		    int my2 = (screen_cy2 - ARENA_Y0) / 2;
+				int my2 = (screen_cy2 - ARENA_Y0) / 2;
  80031e4:	f8d7 30d8 	ldr.w	r3, [r7, #216]	@ 0xd8
  80031e8:	3b24      	subs	r3, #36	@ 0x24
  80031ea:	0fda      	lsrs	r2, r3, #31
@@ -6772,7 +6801,7 @@ int main(void)
  80031ee:	105b      	asrs	r3, r3, #1
  80031f0:	f8c7 30d0 	str.w	r3, [r7, #208]	@ 0xd0
 
-		    if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 2;
+				if (mx2 >= 0 && mx2 < ARENA_W_TILES && my2 >= 0 && my2 < ARENA_H_TILES) arena_map[my2][mx2] = 1;
  80031f4:	f8d7 30d4 	ldr.w	r3, [r7, #212]	@ 0xd4
  80031f8:	2b00      	cmp	r3, #0
  80031fa:	db18      	blt.n	800322e <main+0xc5a>
@@ -6794,10 +6823,10 @@ int main(void)
  8003222:	18ca      	adds	r2, r1, r3
  8003224:	f8d7 30d4 	ldr.w	r3, [r7, #212]	@ 0xd4
  8003228:	4413      	add	r3, r2
- 800322a:	2202      	movs	r2, #2
+ 800322a:	2201      	movs	r2, #1
  800322c:	701a      	strb	r2, [r3, #0]
 
-		    switch (bike2.dir) {
+				switch (bike2.dir) {
  800322e:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003232:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003236:	7c1b      	ldrb	r3, [r3, #16]
@@ -6810,7 +6839,7 @@ int main(void)
  8003248:	0800326d 	.word	0x0800326d
  800324c:	08003285 	.word	0x08003285
  8003250:	08003255 	.word	0x08003255
-		        case DIR_RIGHT: bike2.x += 2; break;
+					case DIR_RIGHT: bike2.x += 2; break;
  8003254:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003258:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  800325c:	681b      	ldr	r3, [r3, #0]
@@ -6819,7 +6848,7 @@ int main(void)
  8003264:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003268:	601a      	str	r2, [r3, #0]
  800326a:	e025      	b.n	80032b8 <main+0xce4>
-		        case DIR_LEFT:  bike2.x -= 2; break;
+					case DIR_LEFT:  bike2.x -= 2; break;
  800326c:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003270:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003274:	681b      	ldr	r3, [r3, #0]
@@ -6828,7 +6857,7 @@ int main(void)
  800327c:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003280:	601a      	str	r2, [r3, #0]
  8003282:	e019      	b.n	80032b8 <main+0xce4>
-		        case DIR_DOWN:  bike2.y += 2; break;
+					case DIR_DOWN:  bike2.y += 2; break;
  8003284:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003288:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  800328c:	685b      	ldr	r3, [r3, #4]
@@ -6838,7 +6867,7 @@ int main(void)
  8003298:	605a      	str	r2, [r3, #4]
  800329a:	e00d      	b.n	80032b8 <main+0xce4>
  800329c:	200004a0 	.word	0x200004a0
-		        case DIR_UP:    bike2.y -= 2; break;
+					case DIR_UP:    bike2.y -= 2; break;
  80032a0:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80032a4:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80032a8:	685b      	ldr	r3, [r3, #4]
@@ -6847,7 +6876,7 @@ int main(void)
  80032b0:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80032b4:	605a      	str	r2, [r3, #4]
  80032b6:	bf00      	nop
-		for (int s = 0; s < steps2; s++) {
+			for (int s = 0; s < steps2; s++) {
  80032b8:	f8d7 311c 	ldr.w	r3, [r7, #284]	@ 0x11c
  80032bc:	3301      	adds	r3, #1
  80032be:	f8c7 311c 	str.w	r3, [r7, #284]	@ 0x11c
@@ -6855,19 +6884,19 @@ int main(void)
  80032c6:	f8d7 30e8 	ldr.w	r3, [r7, #232]	@ 0xe8
  80032ca:	429a      	cmp	r2, r3
  80032cc:	f6ff af72 	blt.w	80031b4 <main+0xbe0>
-		    }
-		}
+				}
+			}
 
-		// --- COLLISION DETECTION ---
-		int p1_crashed = 0;
+			// Deteccion de colisiones
+			int p1_crashed = 0;
  80032d0:	2300      	movs	r3, #0
  80032d2:	f8c7 3118 	str.w	r3, [r7, #280]	@ 0x118
-		int p2_crashed = 0;
+			int p2_crashed = 0;
  80032d6:	2300      	movs	r3, #0
  80032d8:	f8c7 3114 	str.w	r3, [r7, #276]	@ 0x114
 
-		// 1. Check bounds collision
-		if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
+			// Verificar colision con bordes de pantalla
+			if (bike.x < BIKE_X_MIN || bike.x > BIKE_X_MAX || bike.y < BIKE_Y_MIN || bike.y > BIKE_Y_MAX) p1_crashed = 1;
  80032dc:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80032e0:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  80032e4:	681b      	ldr	r3, [r3, #0]
@@ -6890,7 +6919,7 @@ int main(void)
  8003314:	dd02      	ble.n	800331c <main+0xd48>
  8003316:	2301      	movs	r3, #1
  8003318:	f8c7 3118 	str.w	r3, [r7, #280]	@ 0x118
-		if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
+			if (bike2.x < BIKE_X_MIN || bike2.x > BIKE_X_MAX || bike2.y < BIKE_Y_MIN || bike2.y > BIKE_Y_MAX) p2_crashed = 1;
  800331c:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003320:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003324:	681b      	ldr	r3, [r3, #0]
@@ -6914,47 +6943,48 @@ int main(void)
  8003356:	2301      	movs	r3, #1
  8003358:	f8c7 3114 	str.w	r3, [r7, #276]	@ 0x114
 
-		// 2. Check collision against map
-		int hit1 = check_trace_collision(&bike);
+			// Verificar colision contra trazos y paredes del mapa
+			int hit1 = check_trace_collision(&bike);
  800335c:	463b      	mov	r3, r7
  800335e:	4618      	mov	r0, r3
  8003360:	f7fe ff00 	bl	8002164 <check_trace_collision>
  8003364:	f8c7 00e4 	str.w	r0, [r7, #228]	@ 0xe4
-		int hit2 = check_trace_collision(&bike2);
+			int hit2 = check_trace_collision(&bike2);
  8003368:	f107 032c 	add.w	r3, r7, #44	@ 0x2c
  800336c:	4618      	mov	r0, r3
  800336e:	f7fe fef9 	bl	8002164 <check_trace_collision>
  8003372:	f8c7 00e0 	str.w	r0, [r7, #224]	@ 0xe0
 
-		// Normal wall collision detection
-		if (hit1 == 1) p1_crashed = 1;
+			// Colision con pared: el jugador que choco muere
+			if (hit1 == 1) p1_crashed = 1;
  8003376:	f8d7 30e4 	ldr.w	r3, [r7, #228]	@ 0xe4
  800337a:	2b01      	cmp	r3, #1
  800337c:	d102      	bne.n	8003384 <main+0xdb0>
  800337e:	2301      	movs	r3, #1
  8003380:	f8c7 3118 	str.w	r3, [r7, #280]	@ 0x118
-		if (hit2 == 1) p2_crashed = 1;
+			if (hit2 == 1) p2_crashed = 1;
  8003384:	f8d7 30e0 	ldr.w	r3, [r7, #224]	@ 0xe0
  8003388:	2b01      	cmp	r3, #1
  800338a:	d102      	bne.n	8003392 <main+0xdbe>
  800338c:	2301      	movs	r3, #1
  800338e:	f8c7 3114 	str.w	r3, [r7, #276]	@ 0x114
 
-		if (hit1 == 2) p2_crashed = 1;
+			// Colision con trampa: danya al oponente
+			if (hit1 == 2) p2_crashed = 1;
  8003392:	f8d7 30e4 	ldr.w	r3, [r7, #228]	@ 0xe4
  8003396:	2b02      	cmp	r3, #2
  8003398:	d102      	bne.n	80033a0 <main+0xdcc>
  800339a:	2301      	movs	r3, #1
  800339c:	f8c7 3114 	str.w	r3, [r7, #276]	@ 0x114
-		if (hit2 == 2) p1_crashed = 1;
+			if (hit2 == 2) p1_crashed = 1;
  80033a0:	f8d7 30e0 	ldr.w	r3, [r7, #224]	@ 0xe0
  80033a4:	2b02      	cmp	r3, #2
  80033a6:	d102      	bne.n	80033ae <main+0xdda>
  80033a8:	2301      	movs	r3, #1
  80033aa:	f8c7 3118 	str.w	r3, [r7, #280]	@ 0x118
 
-		// 3. Check for head-on collisions
-		if (check_head_on(&bike, &bike2)) {
+			// Verificar colision frontal entre motos
+			if (check_head_on(&bike, &bike2)) {
  80033ae:	f107 022c 	add.w	r2, r7, #44	@ 0x2c
  80033b2:	463b      	mov	r3, r7
  80033b4:	4611      	mov	r1, r2
@@ -6963,22 +6993,25 @@ int main(void)
  80033bc:	4603      	mov	r3, r0
  80033be:	2b00      	cmp	r3, #0
  80033c0:	d005      	beq.n	80033ce <main+0xdfa>
-			p1_crashed = 1;
+				p1_crashed = 1;
  80033c2:	2301      	movs	r3, #1
  80033c4:	f8c7 3118 	str.w	r3, [r7, #280]	@ 0x118
-			p2_crashed = 1;
+				p2_crashed = 1;
  80033c8:	2301      	movs	r3, #1
  80033ca:	f8c7 3114 	str.w	r3, [r7, #276]	@ 0x114
-		}
+			}
 
-		if (p1_crashed || p2_crashed) {
+			// Procesar choque si algun jugador colisiono
+			if (p1_crashed || p2_crashed) {
  80033ce:	f8d7 3118 	ldr.w	r3, [r7, #280]	@ 0x118
  80033d2:	2b00      	cmp	r3, #0
  80033d4:	d104      	bne.n	80033e0 <main+0xe0c>
  80033d6:	f8d7 3114 	ldr.w	r3, [r7, #276]	@ 0x114
  80033da:	2b00      	cmp	r3, #0
  80033dc:	f000 8104 	beq.w	80035e8 <main+0x1014>
-			if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed, selected_mode)) {
+
+				// handle_crash retorna 1 si el juego termino (alguien sin vidas)
+				if (handle_crash(&bike, &bike2, p1_crashed, p2_crashed, selected_mode)) {
  80033e0:	f107 012c 	add.w	r1, r7, #44	@ 0x2c
  80033e4:	4638      	mov	r0, r7
  80033e6:	f8d7 3148 	ldr.w	r3, [r7, #328]	@ 0x148
@@ -6989,11 +7022,13 @@ int main(void)
  80033f8:	4603      	mov	r3, r0
  80033fa:	2b00      	cmp	r3, #0
  80033fc:	f000 81f8 	beq.w	80037f0 <main+0x121c>
-				int winner = 0; // 0 = Tie, 1 = Player 1, 2 = Player 2
+
+					// Determinar ganador segun vidas restantes
+					int winner = 0; // 0=Empate, 1=Jugador1, 2=Jugador2
  8003400:	2300      	movs	r3, #0
  8003402:	f8c7 3110 	str.w	r3, [r7, #272]	@ 0x110
 
-				if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
+					if (bike.lives > 0 && bike2.lives <= 0) winner = 1;
  8003406:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800340a:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800340e:	6a1b      	ldr	r3, [r3, #32]
@@ -7007,7 +7042,7 @@ int main(void)
  8003422:	2301      	movs	r3, #1
  8003424:	f8c7 3110 	str.w	r3, [r7, #272]	@ 0x110
  8003428:	e010      	b.n	800344c <main+0xe78>
-				else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
+					else if (bike2.lives > 0 && bike.lives <= 0) winner = 2;
  800342a:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800342e:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003432:	6a1b      	ldr	r3, [r3, #32]
@@ -7021,19 +7056,20 @@ int main(void)
  8003446:	2302      	movs	r3, #2
  8003448:	f8c7 3110 	str.w	r3, [r7, #272]	@ 0x110
 
-			    char win_msg[24];
+					// Mostrar mensaje de ganador en pantalla
+					char win_msg[24];
 
-			    if (winner == 1){
+					if (winner == 1) {
  800344c:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  8003450:	2b01      	cmp	r3, #1
  8003452:	d12b      	bne.n	80034ac <main+0xed8>
-			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+						snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
  8003454:	f107 0058 	add.w	r0, r7, #88	@ 0x58
  8003458:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  800345c:	4a5a      	ldr	r2, [pc, #360]	@ (80035c8 <main+0xff4>)
  800345e:	2118      	movs	r1, #24
  8003460:	f006 fe36 	bl	800a0d0 <sniprintf>
-			    	FillRect(30, 95, 260, 50, 0x0000);
+						FillRect(30, 95, 260, 50, 0x0000);
  8003464:	2300      	movs	r3, #0
  8003466:	9300      	str	r3, [sp, #0]
  8003468:	2332      	movs	r3, #50	@ 0x32
@@ -7041,7 +7077,7 @@ int main(void)
  800346e:	215f      	movs	r1, #95	@ 0x5f
  8003470:	201e      	movs	r0, #30
  8003472:	f7fd ff67 	bl	8001344 <FillRect>
-			    	LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0x07FF, 0x0000);
  8003476:	f107 0058 	add.w	r0, r7, #88	@ 0x58
  800347a:	2300      	movs	r3, #0
  800347c:	9301      	str	r3, [sp, #4]
@@ -7051,7 +7087,7 @@ int main(void)
  8003486:	2270      	movs	r2, #112	@ 0x70
  8003488:	212d      	movs	r1, #45	@ 0x2d
  800348a:	f7fd ffad 	bl	80013e8 <LCD_Print>
-			    	char_wins[bike.char_index]++;
+						char_wins[bike.char_index]++;
  800348e:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003492:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003496:	f893 3028 	ldrb.w	r3, [r3, #40]	@ 0x28
@@ -7062,17 +7098,17 @@ int main(void)
  80034a4:	4a49      	ldr	r2, [pc, #292]	@ (80035cc <main+0xff8>)
  80034a6:	f822 1013 	strh.w	r1, [r2, r3, lsl #1]
  80034aa:	e04f      	b.n	800354c <main+0xf78>
-			    }else if (winner == 2){
+					} else if (winner == 2) {
  80034ac:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  80034b0:	2b02      	cmp	r3, #2
  80034b2:	d12b      	bne.n	800350c <main+0xf38>
-			    	snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
+						snprintf(win_msg, sizeof(win_msg), "    PROGRAM %d QUALIFIED", winner);
  80034b4:	f107 0058 	add.w	r0, r7, #88	@ 0x58
  80034b8:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  80034bc:	4a42      	ldr	r2, [pc, #264]	@ (80035c8 <main+0xff4>)
  80034be:	2118      	movs	r1, #24
  80034c0:	f006 fe06 	bl	800a0d0 <sniprintf>
-			    	FillRect(30, 95, 260, 50, 0x0000);
+						FillRect(30, 95, 260, 50, 0x0000);
  80034c4:	2300      	movs	r3, #0
  80034c6:	9300      	str	r3, [sp, #0]
  80034c8:	2332      	movs	r3, #50	@ 0x32
@@ -7080,7 +7116,7 @@ int main(void)
  80034ce:	215f      	movs	r1, #95	@ 0x5f
  80034d0:	201e      	movs	r0, #30
  80034d2:	f7fd ff37 	bl	8001344 <FillRect>
-			    	LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0xFD20, 0x0000);
  80034d6:	f107 0058 	add.w	r0, r7, #88	@ 0x58
  80034da:	2300      	movs	r3, #0
  80034dc:	9301      	str	r3, [sp, #4]
@@ -7090,7 +7126,7 @@ int main(void)
  80034e6:	2270      	movs	r2, #112	@ 0x70
  80034e8:	212d      	movs	r1, #45	@ 0x2d
  80034ea:	f7fd ff7d 	bl	80013e8 <LCD_Print>
-			    	char_wins[bike2.char_index]++;
+						char_wins[bike2.char_index]++;
  80034ee:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80034f2:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80034f6:	f893 3028 	ldrb.w	r3, [r3, #40]	@ 0x28
@@ -7101,17 +7137,17 @@ int main(void)
  8003504:	4a31      	ldr	r2, [pc, #196]	@ (80035cc <main+0xff8>)
  8003506:	f822 1013 	strh.w	r1, [r2, r3, lsl #1]
  800350a:	e01f      	b.n	800354c <main+0xf78>
-			    }else if (winner == 0){
+					} else if (winner == 0) {
  800350c:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  8003510:	2b00      	cmp	r3, #0
  8003512:	d11b      	bne.n	800354c <main+0xf78>
-			    	snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
+						snprintf(win_msg, sizeof(win_msg), "     ERR: NO QUALIFIER");
  8003514:	f107 0358 	add.w	r3, r7, #88	@ 0x58
  8003518:	4a2d      	ldr	r2, [pc, #180]	@ (80035d0 <main+0xffc>)
  800351a:	2118      	movs	r1, #24
  800351c:	4618      	mov	r0, r3
  800351e:	f006 fdd7 	bl	800a0d0 <sniprintf>
-					FillRect(30, 95, 260, 50, 0x0000);
+						FillRect(30, 95, 260, 50, 0x0000);
  8003522:	2300      	movs	r3, #0
  8003524:	9300      	str	r3, [sp, #0]
  8003526:	2332      	movs	r3, #50	@ 0x32
@@ -7119,7 +7155,7 @@ int main(void)
  800352c:	215f      	movs	r1, #95	@ 0x5f
  800352e:	201e      	movs	r0, #30
  8003530:	f7fd ff08 	bl	8001344 <FillRect>
-					LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
+						LCD_Print(win_msg, 45, 112, 1, 0xF800, 0x0000);
  8003534:	f107 0058 	add.w	r0, r7, #88	@ 0x58
  8003538:	2300      	movs	r3, #0
  800353a:	9301      	str	r3, [sp, #4]
@@ -7129,15 +7165,17 @@ int main(void)
  8003544:	2270      	movs	r2, #112	@ 0x70
  8003546:	212d      	movs	r1, #45	@ 0x2d
  8003548:	f7fd ff4e 	bl	80013e8 <LCD_Print>
-			    }
+					}
 
-			    if (winner != 0) Save_Scores();
+					// Guardar puntaje si hay ganador
+					if (winner != 0) Save_Scores();
  800354c:	f8d7 3110 	ldr.w	r3, [r7, #272]	@ 0x110
  8003550:	2b00      	cmp	r3, #0
  8003552:	d001      	beq.n	8003558 <main+0xf84>
  8003554:	f7fe fd22 	bl	8001f9c <Save_Scores>
 
-			    val = snprintf(msg, sizeof(msg), "%u", 0);
+					// Parar audio y esperar input de cualquier jugador para volver al menu
+					val = snprintf(msg, sizeof(msg), "%u", 0);
  8003558:	2300      	movs	r3, #0
  800355a:	4a1e      	ldr	r2, [pc, #120]	@ (80035d4 <main+0x1000>)
  800355c:	2103      	movs	r1, #3
@@ -7147,7 +7185,7 @@ int main(void)
  8003566:	b2da      	uxtb	r2, r3
  8003568:	4b1c      	ldr	r3, [pc, #112]	@ (80035dc <main+0x1008>)
  800356a:	701a      	strb	r2, [r3, #0]
-			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+					HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  800356c:	4b1b      	ldr	r3, [pc, #108]	@ (80035dc <main+0x1008>)
  800356e:	781b      	ldrb	r3, [r3, #0]
  8003570:	461a      	mov	r2, r3
@@ -7155,7 +7193,7 @@ int main(void)
  8003576:	4918      	ldr	r1, [pc, #96]	@ (80035d8 <main+0x1004>)
  8003578:	4819      	ldr	r0, [pc, #100]	@ (80035e0 <main+0x100c>)
  800357a:	f002 fc77 	bl	8005e6c <HAL_UART_Transmit>
-			    val = snprintf(msg, sizeof(msg), "%u", 7);
+					val = snprintf(msg, sizeof(msg), "%u", 7);
  800357e:	2307      	movs	r3, #7
  8003580:	4a14      	ldr	r2, [pc, #80]	@ (80035d4 <main+0x1000>)
  8003582:	2103      	movs	r1, #3
@@ -7165,7 +7203,7 @@ int main(void)
  800358c:	b2da      	uxtb	r2, r3
  800358e:	4b13      	ldr	r3, [pc, #76]	@ (80035dc <main+0x1008>)
  8003590:	701a      	strb	r2, [r3, #0]
-			    HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
+					HAL_UART_Transmit(&huart3, (uint8_t *)msg, val, HAL_MAX_DELAY);
  8003592:	4b12      	ldr	r3, [pc, #72]	@ (80035dc <main+0x1008>)
  8003594:	781b      	ldrb	r3, [r3, #0]
  8003596:	461a      	mov	r2, r3
@@ -7173,12 +7211,12 @@ int main(void)
  800359c:	490e      	ldr	r1, [pc, #56]	@ (80035d8 <main+0x1004>)
  800359e:	4810      	ldr	r0, [pc, #64]	@ (80035e0 <main+0x100c>)
  80035a0:	f002 fc64 	bl	8005e6c <HAL_UART_Transmit>
-			    while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
+					while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
  80035a4:	e002      	b.n	80035ac <main+0xfd8>
-			        HAL_Delay(50);
+						HAL_Delay(50);
  80035a6:	2032      	movs	r0, #50	@ 0x32
  80035a8:	f000 fe54 	bl	8004254 <HAL_Delay>
-			    while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
+					while (!datosJugadores.j1_yes && !datosJugadores.j1_no)
  80035ac:	4b0d      	ldr	r3, [pc, #52]	@ (80035e4 <main+0x1010>)
  80035ae:	781b      	ldrb	r3, [r3, #0]
  80035b0:	b2db      	uxtb	r3, r3
@@ -7189,9 +7227,9 @@ int main(void)
  80035ba:	b2db      	uxtb	r3, r3
  80035bc:	2b00      	cmp	r3, #0
  80035be:	d0f2      	beq.n	80035a6 <main+0xfd2>
-			    break;
+					break;
  80035c0:	bf00      	nop
-  while (1) { // outer restart loop — returns here after each game ends
+		while (1) { //Bucle principal, siempre se regresará aqui cuando termine una ronda
  80035c2:	f7ff b87d 	b.w	80026c0 <main+0xec>
  80035c6:	bf00      	nop
  80035c8:	0800ab28 	.word	0x0800ab28
@@ -7202,12 +7240,12 @@ int main(void)
  80035dc:	20004fbc 	.word	0x20004fbc
  80035e0:	20000458 	.word	0x20000458
  80035e4:	20004fb4 	.word	0x20004fb4
+				}
+				continue;
 			}
-			continue;
-		}
 
-		// Restaurar fondo y volver a mostrar motos
-		LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
+			// Restaurar fondo en area de movimiento y redibujar motos
+			LCD_RestoreBgDelta(bike.prev_x, bike.prev_y, bike.x, bike.y,
  80035e8:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80035ec:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  80035f0:	6898      	ldr	r0, [r3, #8]
@@ -7242,9 +7280,9 @@ int main(void)
  800363c:	9300      	str	r3, [sp, #0]
  800363e:	4623      	mov	r3, r4
  8003640:	f7fe fb72 	bl	8001d28 <LCD_RestoreBgDelta>
-		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
+					BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike.trail_color);
 
-		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
+			LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
  8003644:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003648:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  800364c:	6818      	ldr	r0, [r3, #0]
@@ -7254,11 +7292,11 @@ int main(void)
  8003658:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  800365c:	f5a3 73a8 	sub.w	r3, r3, #336	@ 0x150
  8003660:	699b      	ldr	r3, [r3, #24]
-				(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
+					(int) bike.dir, 0, 0, bike.transp, arena_bg, 320);
  8003662:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8003666:	f5a2 72a8 	sub.w	r2, r2, #336	@ 0x150
  800366a:	7c12      	ldrb	r2, [r2, #16]
-		LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
+			LCD_SpriteOverBg(bike.x, bike.y, BIKE_W, BIKE_H, bike.sheet, 8,
  800366c:	4615      	mov	r5, r2
  800366e:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8003672:	f5a2 72a8 	sub.w	r2, r2, #336	@ 0x150
@@ -7280,7 +7318,7 @@ int main(void)
  8003696:	2210      	movs	r2, #16
  8003698:	f7fe fa26 	bl	8001ae8 <LCD_SpriteOverBg>
 
-		LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
+			LCD_RestoreBgDelta(bike2.prev_x, bike2.prev_y, bike2.x, bike2.y,
  800369c:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80036a0:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  80036a4:	6898      	ldr	r0, [r3, #8]
@@ -7315,9 +7353,9 @@ int main(void)
  80036f0:	9300      	str	r3, [sp, #0]
  80036f2:	4623      	mov	r3, r4
  80036f4:	f7fe fb18 	bl	8001d28 <LCD_RestoreBgDelta>
-		BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
+					BIKE_W, BIKE_H, arena_bg, 320, 0, 0, 0, 0, bike2.trail_color);
 
-		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
+			LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
  80036f8:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  80036fc:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003700:	6818      	ldr	r0, [r3, #0]
@@ -7327,11 +7365,11 @@ int main(void)
  800370c:	f507 73a8 	add.w	r3, r7, #336	@ 0x150
  8003710:	f5a3 7392 	sub.w	r3, r3, #292	@ 0x124
  8003714:	699b      	ldr	r3, [r3, #24]
-				(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
+					(int) bike2.dir, 0, 0, bike2.transp, arena_bg, 320);
  8003716:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  800371a:	f5a2 7292 	sub.w	r2, r2, #292	@ 0x124
  800371e:	7c12      	ldrb	r2, [r2, #16]
-		LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
+			LCD_SpriteOverBg(bike2.x, bike2.y, BIKE_W, BIKE_H, bike2.sheet, 8,
  8003720:	4615      	mov	r5, r2
  8003722:	f507 72a8 	add.w	r2, r7, #336	@ 0x150
  8003726:	f5a2 7292 	sub.w	r2, r2, #292	@ 0x124
@@ -7354,7 +7392,8 @@ int main(void)
  800374c:	f7fe f9cc 	bl	8001ae8 <LCD_SpriteOverBg>
 
 
-		if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
+			// Enviar señal de audio si cambia estado de algun boton
+			if ((p_j1 != snap.j1_no) || (p_j2 != snap.j2_no)) {
  8003750:	f897 3071 	ldrb.w	r3, [r7, #113]	@ 0x71
  8003754:	f897 2128 	ldrb.w	r2, [r7, #296]	@ 0x128
  8003758:	429a      	cmp	r2, r3
@@ -7364,14 +7403,15 @@ int main(void)
  8003764:	429a      	cmp	r2, r3
  8003766:	d03e      	beq.n	80037e6 <main+0x1212>
 
-			if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
+				if ((snap.j1_no == 0) && (snap.j2_no == 0)) {
  8003768:	f897 3071 	ldrb.w	r3, [r7, #113]	@ 0x71
  800376c:	2b00      	cmp	r3, #0
  800376e:	d117      	bne.n	80037a0 <main+0x11cc>
  8003770:	f897 3073 	ldrb.w	r3, [r7, #115]	@ 0x73
  8003774:	2b00      	cmp	r3, #0
  8003776:	d113      	bne.n	80037a0 <main+0x11cc>
-				val = snprintf(msg, sizeof(msg), "%u", 4);
+					// Ningun boton presionado: audio de motos en movimiento
+					val = snprintf(msg, sizeof(msg), "%u", 4);
  8003778:	2304      	movs	r3, #4
  800377a:	4a20      	ldr	r2, [pc, #128]	@ (80037fc <main+0x1228>)
  800377c:	2103      	movs	r1, #3
@@ -7381,7 +7421,7 @@ int main(void)
  8003786:	b2da      	uxtb	r2, r3
  8003788:	4b1e      	ldr	r3, [pc, #120]	@ (8003804 <main+0x1230>)
  800378a:	701a      	strb	r2, [r3, #0]
-				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+					HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
  800378c:	4b1d      	ldr	r3, [pc, #116]	@ (8003804 <main+0x1230>)
  800378e:	781b      	ldrb	r3, [r3, #0]
  8003790:	461a      	mov	r2, r3
@@ -7390,15 +7430,15 @@ int main(void)
  8003798:	481b      	ldr	r0, [pc, #108]	@ (8003808 <main+0x1234>)
  800379a:	f002 fb67 	bl	8005e6c <HAL_UART_Transmit>
  800379e:	e01a      	b.n	80037d6 <main+0x1202>
-				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
-			} else if ((p_j1 != 1) || (p_j2 != 1)) {
+				} else if ((p_j1 != 1) || (p_j2 != 1)) {
  80037a0:	f897 3128 	ldrb.w	r3, [r7, #296]	@ 0x128
  80037a4:	2b01      	cmp	r3, #1
  80037a6:	d103      	bne.n	80037b0 <main+0x11dc>
  80037a8:	f897 3127 	ldrb.w	r3, [r7, #295]	@ 0x127
  80037ac:	2b01      	cmp	r3, #1
  80037ae:	d012      	beq.n	80037d6 <main+0x1202>
-				val = snprintf(msg, sizeof(msg), "%u", 5);
+					// Boton presionado: audio de turbo
+					val = snprintf(msg, sizeof(msg), "%u", 5);
  80037b0:	2305      	movs	r3, #5
  80037b2:	4a12      	ldr	r2, [pc, #72]	@ (80037fc <main+0x1228>)
  80037b4:	2103      	movs	r1, #3
@@ -7408,7 +7448,7 @@ int main(void)
  80037be:	b2da      	uxtb	r2, r3
  80037c0:	4b10      	ldr	r3, [pc, #64]	@ (8003804 <main+0x1230>)
  80037c2:	701a      	strb	r2, [r3, #0]
-				HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
+					HAL_UART_Transmit(&huart3, (uint8_t*) msg, val, HAL_MAX_DELAY);
  80037c4:	4b0f      	ldr	r3, [pc, #60]	@ (8003804 <main+0x1230>)
  80037c6:	781b      	ldrb	r3, [r3, #0]
  80037c8:	461a      	mov	r2, r3
@@ -7416,24 +7456,23 @@ int main(void)
  80037ce:	490c      	ldr	r1, [pc, #48]	@ (8003800 <main+0x122c>)
  80037d0:	480d      	ldr	r0, [pc, #52]	@ (8003808 <main+0x1234>)
  80037d2:	f002 fb4b 	bl	8005e6c <HAL_UART_Transmit>
-				//HAL_UART_Transmit(&huart2, (uint8_t*) msg, val, HAL_MAX_DELAY);
-			}
+				}
 
-			p_j1 = snap.j1_no;
+				p_j1 = snap.j1_no;
  80037d6:	f897 3071 	ldrb.w	r3, [r7, #113]	@ 0x71
  80037da:	f887 3128 	strb.w	r3, [r7, #296]	@ 0x128
-			p_j2 = snap.j2_no;
+				p_j2 = snap.j2_no;
  80037de:	f897 3073 	ldrb.w	r3, [r7, #115]	@ 0x73
  80037e2:	f887 3127 	strb.w	r3, [r7, #295]	@ 0x127
-		}
+			}
 
-		HAL_Delay(15);
+			HAL_Delay(15);
  80037e6:	200f      	movs	r0, #15
  80037e8:	f000 fd34 	bl	8004254 <HAL_Delay>
  80037ec:	f7ff bbcd 	b.w	8002f8a <main+0x9b6>
-			continue;
+				continue;
  80037f0:	bf00      	nop
-	while (1) {
+		while (1) {
  80037f2:	f7ff bbca 	b.w	8002f8a <main+0x9b6>
  80037f6:	bf00      	nop
  80037f8:	0800bc28 	.word	0x0800bc28
@@ -8140,6 +8179,8 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+// Callback de interrupcion UART, maneja sincronizacion y recepcion de paquetes de controles
+// Protocolo: espera byte 0xAA como inicio de trama, luego recibe 8 bytes de payload
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
  8003bf4:	b580      	push	{r7, lr}
  8003bf6:	b082      	sub	sp, #8
@@ -8162,6 +8203,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
  8003c12:	781b      	ldrb	r3, [r3, #0]
  8003c14:	2baa      	cmp	r3, #170	@ 0xaa
  8003c16:	d108      	bne.n	8003c2a <HAL_UART_RxCpltCallback+0x36>
+                // Byte de inicio recibido, pasar a modo recepcion de payload
                 sincronizado = 1;
  8003c18:	4b15      	ldr	r3, [pc, #84]	@ (8003c70 <HAL_UART_RxCpltCallback+0x7c>)
  8003c1a:	2201      	movs	r2, #1
