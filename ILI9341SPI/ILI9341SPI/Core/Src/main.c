@@ -583,13 +583,13 @@ int main(void)
 				}
 				prev_j2_x = snap.j2_x;
 
-				if (snap.j1_yes != 0 && prev_j2_no == 0) {
+				if (snap.j2_no != 0 && prev_j2_no == 0) {
 					p2_ready = !p2_ready; // Lock/Unlock choice
 					update_p2 = 1;
 				}
 
 				prev_j1_no = snap.j1_no;
-				prev_j2_no = snap.j1_yes;
+				prev_j2_no = snap.j2_no;
 
 				// --- Render Updates ---
 				if (update_p1) {

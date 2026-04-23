@@ -5944,8 +5944,8 @@ int main(void)
  8002a24:	f897 307e 	ldrb.w	r3, [r7, #126]	@ 0x7e
  8002a28:	f887 3126 	strb.w	r3, [r7, #294]	@ 0x126
 
-				if (snap.j1_yes != 0 && prev_j2_no == 0) {
- 8002a2c:	f897 3078 	ldrb.w	r3, [r7, #120]	@ 0x78
+				if (snap.j2_no != 0 && prev_j2_no == 0) {
+ 8002a2c:	f897 307b 	ldrb.w	r3, [r7, #123]	@ 0x7b
  8002a30:	2b00      	cmp	r3, #0
  8002a32:	d00f      	beq.n	8002a54 <main+0x4a4>
  8002a34:	f897 3124 	ldrb.w	r3, [r7, #292]	@ 0x124
@@ -5967,8 +5967,8 @@ int main(void)
 				prev_j1_no = snap.j1_no;
  8002a54:	f897 3079 	ldrb.w	r3, [r7, #121]	@ 0x79
  8002a58:	f887 3125 	strb.w	r3, [r7, #293]	@ 0x125
-				prev_j2_no = snap.j1_yes;
- 8002a5c:	f897 3078 	ldrb.w	r3, [r7, #120]	@ 0x78
+				prev_j2_no = snap.j2_no;
+ 8002a5c:	f897 307b 	ldrb.w	r3, [r7, #123]	@ 0x7b
  8002a60:	f887 3124 	strb.w	r3, [r7, #292]	@ 0x124
 
 				// --- Render Updates ---
