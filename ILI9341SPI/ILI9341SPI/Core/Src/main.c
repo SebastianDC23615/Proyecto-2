@@ -740,7 +740,7 @@ int main(void)
 			// Leer inputs actuales de ambos jugadores
 			struct_mensaje snap = datosJugadores;
 
-			input_to_bike(-(snap.j1_x), snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir, &bike.speed);
+			input_to_bike(snap.j1_x, snap.j1_y, snap.j1_yes, snap.j1_no, &bike.dir, &bike.speed);
 			input_to_bike(snap.j2_x, snap.j2_y, snap.j2_yes, snap.j2_no, &bike2.dir, &bike2.speed);
 
 			// Guardar posiciones anteriores para restauracion del fondo
