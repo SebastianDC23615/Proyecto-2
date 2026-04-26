@@ -64,8 +64,8 @@ all: main-build
 main-build: ILI9341SPI.elf secondary-outputs
 
 # Tool invocations
-ILI9341SPI.elf ILI9341SPI.map: $(OBJS) $(USER_OBJS) C:\Users\2015s\OneDrive\ -\ UVG\2026\ UVG\semestre\ 1\Digital\ 2\proyecto2\Proyecto\ 2\ILI9341SPI\ILI9341SPI\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "ILI9341SPI.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\2015s\OneDrive - UVG\2026 UVG\semestre 1\Digital 2\proyecto2\Proyecto 2\ILI9341SPI\ILI9341SPI\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ILI9341SPI.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ILI9341SPI.elf ILI9341SPI.map: $(OBJS) $(USER_OBJS) C:\Users\2015s\Documents\GitHub\Proyecto-2\ILI9341SPI\ILI9341SPI\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "ILI9341SPI.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\2015s\Documents\GitHub\Proyecto-2\ILI9341SPI\ILI9341SPI\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ILI9341SPI.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
